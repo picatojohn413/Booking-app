@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Book</title>
+<style>
+  :root{
+    --bg: #F6F4EF;
+    --panel: #FFFFFF;
+    --ink: #22322D;
+    --ink-soft: #5B6B63;
+    --line: #DFDACB;
+    --teal: #4C7A8C;
+    --amber: #C9962B;
+    --rust: #B5542A;
+    --green: #5B8C5A;
+    --radius-card: 14px;
+    --radius-pill: 999px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    padding-bottom: 84px;
+  }
+  .display{
+    font-family: Georgia, "Times New Roman", serif;
+  }
+
+  header.top{
+    padding: 22px 18px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  header.top h1{
+    margin:0;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header.top p{
+    margin: 4px 0 0;
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+
+  .stats{
+    display:flex;
+    gap:10px;
+    padding: 14px 18px 0;
+  }
+  .stat{
+    flex:1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 12px 14px;
+  }
+  .stat .num{ font-size: 22px; font-weight: 700; line-height:1; }
+  .stat .lbl{ font-size: 11.5px; color: var(--ink-soft); margin-top:4px; }
+  .stat.alert .num{ color: var(--rust); }
+
+  main{ padding: 16px 18px 8px; }
+
+  .section-title{
+    font-size: 15px;
+    font-weight: 700;
+    margin: 18px 0 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .section-title .add-mini{
+    font-size: 12.5px;
+    color: var(--teal);
+    font-weight:600;
+    cursor:pointer;
+    background:none;
+    border:none;
+    padding:0;
+  }
+
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 13px 14px;
+    margin-bottom: 10px;
+  }
+
+  .order-card .row1{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .order-card .cust{ font-weight:700; font-size:14.5px; }
+  .order-card .phone{ font-size:12px; color: var(--ink-soft); margin-top:2px;}
+  .order-card .items{ font-size:13px; color: var(--ink); margin-top:8px; line-height:1.5; }
+  .order-card .items .li{ display:flex; justify-content:space-between; }
+  .order-card .meta{ display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:9px; border-top:1px dashed var(--line); }
+  .order-card .total{ font-weight:700; font-size:14px; }
+  .order-card .date{ font-size:11.5px; color: var(--ink-soft); }
+
+  .badge{
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+  }
+  .badge.pending{ background: #FBEFDD; color: var(--amber); }
+  .badge.confirmed{ background: #E4EEF1; color: var(--teal); }
+  .badge.delivered{ background: #E7EFE6; color: var(--green); }
+
+  select.status-select{
+    font-size: 11.5px;
+    font-weight:700;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--line);
+    padding: 4px 8px;
+    background: var(--panel);
+    color: var(--ink);
+  }
+
+  .product-card{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .product-card .pname{ font-weight:600; font-size:14px; }
+  .product-card .pcat{ font-size:11.5px; color: var(--ink-soft); margin-top:2px; }
+  .product-card .pright{ text-align:right; }
+  .product-card .pprice{ font-size:13px; font-weight:700; }
+  .product-card .pstock{ font-size:12px; margin-top:3px; }
+  .pstock.ok{ color: var(--green); }
+  .pstock.low{ color: var(--rust); font-weight:700; }
+
+  .empty{
+    text-align:center;
+    color: var(--ink-soft);
+    font-size: 13px;
+    padding: 30px 10px;
+  }
+
+  nav.tabs{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    display:flex;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  nav.tabs button{
+    flex:1;
+    background:none;
+    border:none;
+    padding: 8px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    cursor:pointer;
+  }
+  nav.tabs button.active{ color: var(--teal); }
+  nav.tabs .icon{ font-size:18px; line-height:1; }
+
+  .fab{
+    position: fixed;
+    right: 18px;
+    bottom: 76px;
+    width: 52px; height:52px;
+    border-radius: 50%;
+    background: var(--teal);
+    color:#fff;
+    border:none;
+    font-size: 26px;
+    box-shadow: 0 6px 16px rgba(76,122,140,0.35);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .sheet-overlay{
+    position:fixed; inset:0;
+    background: rgba(34,50,45,0.35);
+    display:none;
+    align-items:flex-end;
+    z-index: 50;
+  }
+  .sheet-overlay.open{ display:flex; }
+  .sheet{
+    background: var(--panel);
+    width:100%;
+    border-radius: 18px 18px 0 0;
+    padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+    max-height: 88vh;
+    overflow-y:auto;
+  }
+  .sheet h2{ margin: 0 0 14px; font-size: 17px; }
+  .field{ margin-bottom: 12px; }
+  .field label{ display:block; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 5px; font-weight:600; }
+  .field input, .field select{
+    width:100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    font-size: 14px;
+    background: #FBFAF7;
+    color: var(--ink);
+  }
+  .item-row{
+    display:flex;
+    gap:8px;
+    align-items:flex-end;
+    margin-bottom: 8px;
+  }
+  .item-row .field{ margin-bottom:0; }
+  .item-row select{ flex: 1.5; }
+  .item-row input{ flex:1; }
+  .item-row button{
+    background: none;
+    border: none;
+    color: var(--rust);
+    font-size: 20px;
+    padding: 0 4px;
+    cursor:pointer;
+  }
+  .add-item-btn{
+    background:none;
+    border: 1px dashed var(--line);
+    color: var(--teal);
+    font-weight:600;
+    font-size: 13px;
+    padding: 9px;
+    border-radius: 10px;
+    width:100%;
+    cursor:pointer;
+    margin-bottom: 14px;
+  }
+  .sheet-total{
+    display:flex;
+    justify-content:space-between;
+    font-weight:700;
+    font-size: 15px;
+    padding: 10px 0;
+    border-top: 1px dashed var(--line);
+    margin-bottom: 14px;
+  }
+  .save-btn{
+    width:100%;
+    background: var(--teal);
+    color:#fff;
+    border:none;
+    padding: 13px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor:pointer;
+  }
+  .cancel-btn{
+    width:100%;
+    background:none;
+    border:none;
+    color: var(--ink-soft);
+    padding: 10px;
+    font-size: 13.5px;
+    text-align:center;
+    cursor:pointer;
+  }
+  .loading{ text-align:center; padding: 40px; color: var(--ink-soft); font-size:13px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1 class="display">Order Book</h1>
+  <p>Apni products ki bookings track karein</p>
+</header>
+
+<div class="stats" id="statsRow"></div>
+
+<main id="mainContent">
+  <div class="loading">Loading...</div>
+</main>
+
+<button class="fab" id="fabBtn">+</button>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="orders"><span class="icon">🧾</span>Orders</button>
+  <button class="tab-btn" data-tab="stock"><span class="icon">📦</span>Stock</button>
+</nav>
+
+<!-- Add Order Sheet -->
+<div class="sheet-overlay" id="orderSheetOverlay">
+  <div class="sheet">
+    <h2>Nayi Booking</h2>
+    <div class="field">
+      <label>Customer ka naam</label>
+      <input type="text" id="custName" placeholder="e.g. Ahmed Bhai">
+    </div>
+    <div class="field">
+      <label>Phone number (optional)</label>
+      <input type="tel" id="custPhone" placeholder="03xx-xxxxxxx">
+    </div>
+    <label style="display:block; font-size:12.5px; color:var(--ink-soft); font-weight:600; margin-bottom:6px;">Products</label>
+    <div id="itemRows"></div>
+    <button class="add-item-btn" id="addItemBtn">+ Product add karein</button>
+    <div class="sheet-total">
+      <span>Total</span>
+      <span id="orderTotalDisplay">Rs. 0</span>
+    </div>
+    <button class="save-btn" id="saveOrderBtn">Booking save karein</button>
+    <button class="cancel-btn" id="cancelOrderBtn">Cancel</button>
+  </div>
+</div>
+
+<!-- Add/Edit Product Sheet -->
+<div class="sheet-overlay" id="productSheetOverlay">
+  <div class="sheet">
+    <h2 id="productSheetTitle">Naya Product</h2>
+    <div class="field">
+      <label>Product ka naam</label>
+      <input type="text" id="prodName" placeholder="e.g. Shoe Polish Kit">
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select id="prodCategory">
+        <option>Shoe Care</option>
+        <option>Bathroom & Home Cleaning</option>
+        <option>Insect / Mosquito Repellent</option>
+        <option>Oil / Lotion</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Price (Rs.)</label>
+      <input type="number" id="prodPrice" placeholder="0" min="0">
+    </div>
+    <div class="field">
+      <label>Stock (quantity available)</label>
+      <input type="number" id="prodStock" placeholder="0" min="0">
+    </div>
+    <button class="save-btn" id="saveProductBtn">Product save karein</button>
+    <button class="cancel-btn" id="cancelProductBtn">Cancel</button>
+  </div>
+</div>
+
+<script>
+let products = [];
+let orders = [];
+let currentTab = 'orders';
+let editingProductId = null;
+
+async function loadAll(){
+  try{
+    const p = await window.storage.get('products', false);
+    products = p ? JSON.parse(p.value) : [];
+  }catch(e){ products = []; }
+  try{
+    const o = await window.storage.get('orders', false);
+    orders = o ? JSON.parse(o.value) : [];
+  }catch(e){ orders = []; }
+
+  if(products.length === 0){
+    products = [
+      {id:'p1', name:'Shoe Polish Kit', category:'Shoe Care', price:350, stock:12},
+      {id:'p2', name:'Bathroom Cleaner Spray', category:'Bathroom & Home Cleaning', price:280, stock:8},
+      {id:'p3', name:'Mosquito Repellent Oil', category:'Insect / Mosquito Repellent', price:220, stock:20},
+    ];
+    await saveProducts();
+  }
+  render();
+}
+
+async function saveProducts(){
+  try{ await window.storage.set('products', JSON.stringify(products), false); }
+  catch(e){ console.error('save products failed', e); }
+}
+async function saveOrders(){
+  try{ await window.storage.set('orders', JSON.stringify(orders), false); }
+  catch(e){ console.error('save orders failed', e); }
+}
+
+function fmtMoney(n){ return 'Rs. ' + Number(n).toLocaleString(); }
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
+}
+
+function render(){
+  renderStats();
+  if(currentTab === 'orders') renderOrders();
+  else renderStock();
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab === currentTab);
+  });
+  document.getElementById('fabBtn').style.display = 'flex';
+}
+
+function renderStats(){
+  const today = new Date().toDateString();
+  const todaysOrders = orders.filter(o => new Date(o.date).toDateString() === today).length;
+  const pending = orders.filter(o => o.status === 'pending').length;
+  const lowStock = products.filter(p => p.stock <= 3).length;
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat"><div class="num">${todaysOrders}</div><div class="lbl">Aaj ki booking</div></div>
+    <div class="stat"><div class="num">${pending}</div><div class="lbl">Pending orders</div></div>
+    <div class="stat ${lowStock>0?'alert':''}"><div class="num">${lowStock}</div><div class="lbl">Low stock items</div></div>
+  `;
+}
+
+function renderOrders(){
+  const main = document.getElementById('mainContent');
+  const sorted = [...orders].sort((a,b) => new Date(b.date) - new Date(a.date));
+  if(sorted.length === 0){
+    main.innerHTML = `<div class="empty">Abhi tak koi booking nahi. Neeche + button se nayi booking add karein.</div>`;
+    return;
+  }
+  main.innerHTML = `<div class="section-title">Saari Bookings</div>` + sorted.map(o => `
+    <div class="card order-card">
+      <div class="row1">
+        <div>
+          <div class="cust">${escapeHtml(o.customerName)}</div>
+          ${o.phone ? `<div class="phone">${escapeHtml(o.phone)}</div>` : ''}
+        </div>
+        <select class="status-select" onchange="updateStatus('${o.id}', this.value)">
+          <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
+          <option value="confirmed" ${o.status==='confirmed'?'selected':''}>Confirmed</option>
+          <option value="delivered" ${o.status==='delivered'?'selected':''}>Delivered</option>
+        </select>
+      </div>
+      <div class="items">
+        ${o.items.map(it => `<div class="li"><span>${escapeHtml(it.name)} × ${it.qty}</span><span>${fmtMoney(it.price * it.qty)}</span></div>`).join('')}
+      </div>
+      <div class="meta">
+        <span class="date">${fmtDate(o.date)}</span>
+        <span class="total">${fmtMoney(o.total)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderStock(){
+  const main = document.getElementById('mainContent');
+  if(products.length === 0){
+    main.innerHTML = `<div class="empty">Koi product nahi. + button se product add karein.</div>`;
+    return;
+  }
+  const cats = [...new Set(products.map(p=>p.category))];
+  main.innerHTML = cats.map(cat => `
+    <div class="section-title">${escapeHtml(cat)}</div>
+    ${products.filter(p=>p.category===cat).map(p => `
+      <div class="card product-card" onclick="openEditProduct('${p.id}')">
+        <div>
+          <div class="pname">${escapeHtml(p.name)}</div>
+          <div class="pcat">${escapeHtml(p.category)}</div>
+        </div>
+        <div class="pright">
+          <div class="pprice">${fmtMoney(p.price)}</div>
+          <div class="pstock ${p.stock<=3?'low':'ok'}">${p.stock} in stock${p.stock<=3?' ⚠':''}</div>
+        </div>
+      </div>
+    `).join('')}
+  `).join('');
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+async function updateStatus(orderId, newStatus){
+  const order = orders.find(o => o.id === orderId);
+  if(order){
+    order.status = newStatus;
+    await saveOrders();
+    render();
+  }
+}
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentTab = btn.dataset.tab;
+    render();
+  });
+});
+
+// ---- Order Sheet ----
+const orderSheetOverlay = document.getElementById('orderSheetOverlay');
+const itemRows = document.getElementById('itemRows');
+
+function productOptions(selectedId){
+  return products.map(p => `<option value="${p.id}" ${p.id===selectedId?'selected':''}>${escapeHtml(p.name)} (${p.stock} left)</option>`).join('');
+}
+
+function addItemRow(){
+  if(products.length === 0){
+    alert('Pehle Stock tab se products add karein.');
+    return;
+  }
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML = `
+    <div class="field">
+      <label>Product</label>
+      <select class="item-product">${productOptions(products[0].id)}</select>
+    </div>
+    <div class="field">
+      <label>Qty</label>
+      <input type="number" class="item-qty" value="1" min="1">
+    </div>
+    <button type="button" onclick="this.parentElement.remove(); updateOrderTotal();">×</button>
+  `;
+  row.querySelector('.item-product').addEventListener('change', updateOrderTotal);
+  row.querySelector('.item-qty').addEventListener('input', updateOrderTotal);
+  itemRows.appendChild(row);
+  updateOrderTotal();
+}
+
+function updateOrderTotal(){
+  let total = 0;
+  itemRows.querySelectorAll('.item-row').forEach(row => {
+    const prodId = row.querySelector('.item-product').value;
+    const qty = Number(row.querySelector('.item-qty').value) || 0;
+    const prod = products.find(p => p.id === prodId);
+    if(prod) total += prod.price * qty;
+  });
+  document.getElementById('orderTotalDisplay').textContent = fmtMoney(total);
+}
+
+document.getElementById('fabBtn').addEventListener('click', () => {
+  if(currentTab === 'orders') openOrderSheet();
+  else openProductSheet();
+});
+document.getElementById('addItemBtn').addEventListener('click', addItemRow);
+document.getElementById('cancelOrderBtn').addEventListener('click', () => orderSheetOverlay.classList.remove('open'));
+
+function openOrderSheet(){
+  document.getElementById('custName').value = '';
+  document.getElementById('custPhone').value = '';
+  itemRows.innerHTML = '';
+  if(products.length > 0) addItemRow();
+  updateOrderTotal();
+  orderSheetOverlay.classList.add('open');
+}
+
+document.getElementById('saveOrderBtn').addEventListener('click', async () => {
+  const custName = document.getElementById('custName').value.trim();
+  if(!custName){ alert('Customer ka naam likhein.'); return; }
+  const rows = [...itemRows.querySelectorAll('.item-row')];
+  if(rows.length === 0){ alert('Kam az kam ek product add karein.'); return; }
+
+  const items = [];
+  let total = 0;
+  for(const row of rows){
+    const prodId = row.querySelector('.item-product').value;
+    const qty = Number(row.querySelector('.item-qty').value) || 0;
+    const prod = products.find(p => p.id === prodId);
+    if(prod && qty > 0){
+      items.push({productId: prod.id, name: prod.name, price: prod.price, qty});
+      total += prod.price * qty;
+      prod.stock = Math.max(0, prod.stock - qty);
+    }
+  }
+
+  const order = {
+    id: 'o' + Date.now(),
+    customerName: custName,
+    phone: document.getElementById('custPhone').value.trim(),
+    items,
+    total,
+    status: 'pending',
+    date: new Date().toISOString()
+  };
+  orders.push(order);
+  await saveOrders();
+  await saveProducts();
+  orderSheetOverlay.classList.remove('open');
+  render();
+});
+
+// ---- Product Sheet ----
+const productSheetOverlay = document.getElementById('productSheetOverlay');
+document.getElementById('cancelProductBtn').addEventListener('click', () => productSheetOverlay.classList.remove('open'));
+
+function openProductSheet(){
+  editingProductId = null;
+  document.getElementById('productSheetTitle').textContent = 'Naya Product';
+  document.getElementById('prodName').value = '';
+  document.getElementById('prodCategory').value = 'Shoe Care';
+  document.getElementById('prodPrice').value = '';
+  document.getElementById('prodStock').value = '';
+  productSheetOverlay.classList.add('open');
+}
+
+function openEditProduct(id){
+  const p = products.find(x => x.id === id);
+  if(!p) return;
+  editingProductId = id;
+  document.getElementById('productSheetTitle').textContent = 'Product Edit Karein';
+  document.getElementById('prodName').value = p.name;
+  document.getElementById('prodCategory').value = p.category;
+  document.getElementById('prodPrice').value = p.price;
+  document.getElementById('prodStock').value = p.stock;
+  productSheetOverlay.classList.add('open');
+}
+
+document.getElementById('saveProductBtn').addEventListener('click', async () => {
+  const name = document.getElementById('prodName').value.trim();
+  if(!name){ alert('Product ka naam likhein.'); return; }
+  const category = document.getElementById('prodCategory').value;
+  const price = Number(document.getElementById('prodPrice').value) || 0;
+  const stock = Number(document.getElementById('prodStock').value) || 0;
+
+  if(editingProductId){
+    const p = products.find(x => x.id === editingProductId);
+    p.name = name; p.category = category; p.price = price; p.stock = stock;
+  } else {
+    products.push({id: 'p' + Date.now(), name, category, price, stock});
+  }
+  await saveProducts();
+  productSheetOverlay.classList.remove('open');
+  render();
+});
+
+loadAll();
+</script>
+
+</body>
+</html>
