@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>King Enterprise</title>
+<link rel="manifest" href="manifest.json">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed', err));
+  });
+}
+</script>
+<style>
+  :root{
+    --bg: #F6F4EF; --panel: #FFFFFF; --ink: #22322D; --ink-soft: #5B6B63;
+    --line: #DFDACB; --teal: #4C7A8C; --amber: #C9962B; --rust: #B5542A; --green: #5B8C5A;
+    --radius-card: 14px; --radius-pill: 999px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; min-height: 100vh; padding-bottom: 84px; }
+  .display{ font-family: Georgia, "Times New Roman", serif; }
+
+  header.top{ padding: 18px 18px 16px; border-bottom: 1px solid var(--line); background: var(--panel); display:flex; align-items:center; justify-content:space-between; gap: 10px; }
+  header.top .htext h1{ margin:0; font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  header.top .htext p{ margin: 4px 0 0; color: var(--ink-soft); font-size: 12.5px; }
+  .gear-btn{ background: none; border: 1px solid var(--line); border-radius: 50%; width: 38px; height:38px; font-size: 17px; display:flex; align-items:center; justify-content:center; color: var(--ink-soft); flex-shrink:0; cursor:pointer; }
+
+  .stats{ display:flex; gap:10px; padding: 14px 18px 0; }
+  .stat{ flex:1; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 12px 14px; }
+  .stat .num{ font-size: 22px; font-weight: 700; line-height:1; }
+  .stat .lbl{ font-size: 11.5px; color: var(--ink-soft); margin-top:4px; }
+  .stat.alert .num{ color: var(--rust); }
+
+  main{ padding: 16px 18px 8px; }
+  .section-title{ font-size: 15px; font-weight: 700; margin: 18px 0 10px; display:flex; align-items:center; justify-content:space-between; }
+
+  .card{ background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 13px 14px; margin-bottom: 10px; }
+
+  .order-card .row1{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .order-card .cust{ font-weight:700; font-size:14.5px; }
+  .order-card .phone{ font-size:12px; color: var(--ink-soft); margin-top:2px;}
+  .order-card .items{ font-size:13px; color: var(--ink); margin-top:8px; line-height:1.5; }
+  .order-card .items .li{ display:flex; justify-content:space-between; }
+  .order-card .totals{ margin-top:9px; padding-top:9px; border-top:1px dashed var(--line); font-size:13px; }
+  .order-card .totals .row{ display:flex; justify-content:space-between; }
+  .order-card .totals .disc{ color: var(--rust); }
+  .order-card .totals .final{ font-weight:700; font-size:14.5px; margin-top:3px; }
+  .order-card .meta{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+  .order-card .date{ font-size:11.5px; color: var(--ink-soft); }
+  .order-card .del-order{ background:none; border:none; color: var(--ink-soft); font-size:16px; padding: 2px 6px; cursor:pointer; }
+
+  select.status-select{ font-size: 11.5px; font-weight:700; border-radius: var(--radius-pill); border: 1px solid var(--line); padding: 4px 8px; background: var(--panel); color: var(--ink); }
+
+  .product-card{ display:flex; gap:12px; align-items:center; }
+  .product-card .pimg{ width: 52px; height:52px; border-radius: 10px; object-fit: cover; background: var(--bg); border: 1px solid var(--line); flex-shrink:0; }
+  .product-card .pimg.placeholder{ display:flex; align-items:center; justify-content:center; font-size:20px; color: var(--line); }
+  .product-card .pinfo{ flex:1; min-width:0; }
+  .product-card .pname{ font-weight:600; font-size:14px; }
+  .product-card .pcode{ font-size:11px; color: var(--teal); font-weight:600; }
+  .product-card .pcat{ font-size:11.5px; color: var(--ink-soft); margin-top:2px; }
+  .product-card .pright{ text-align:right; flex-shrink:0; }
+  .product-card .pprice{ font-size:13px; font-weight:700; }
+  .product-card .pstock{ font-size:12px; margin-top:3px; }
+  .pstock.ok{ color: var(--green); }
+  .pstock.low{ color: var(--rust); font-weight:700; }
+
+  .customer-card{ display:flex; justify-content:space-between; align-items:center; }
+  .customer-card .cname{ font-weight:700; font-size:14.5px; }
+  .customer-card .cphone{ font-size:12px; color: var(--ink-soft); margin-top:2px; }
+  .customer-card .cdisc{ font-size:12.5px; font-weight:700; color: var(--teal); background:#E4EEF1; padding:4px 10px; border-radius: var(--radius-pill); }
+
+  .empty{ text-align:center; color: var(--ink-soft); font-size: 13px; padding: 30px 10px; }
+
+  nav.tabs{ position:fixed; bottom:0; left:0; right:0; background: var(--panel); border-top: 1px solid var(--line); display:flex; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); }
+  nav.tabs button{ flex:1; background:none; border:none; padding: 8px 4px; font-size: 11px; font-weight: 600; color: var(--ink-soft); display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
+  nav.tabs button.active{ color: var(--teal); }
+  nav.tabs .icon{ font-size:18px; line-height:1; }
+
+  .fab{ position: fixed; right: 18px; bottom: 76px; width: 52px; height:52px; border-radius: 50%; background: var(--teal); color:#fff; border:none; font-size: 26px; box-shadow: 0 6px 16px rgba(76,122,140,0.35); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+
+  .sheet-overlay{ position:fixed; inset:0; background: rgba(34,50,45,0.35); display:none; align-items:flex-end; z-index: 50; }
+  .sheet-overlay.open{ display:flex; }
+  .sheet{ background: var(--panel); width:100%; border-radius: 18px 18px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); max-height: 88vh; overflow-y:auto; }
+  .sheet h2{ margin: 0 0 14px; font-size: 17px; }
+  .field{ margin-bottom: 12px; }
+  .field label{ display:block; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 5px; font-weight:600; }
+  .field input, .field select, .field textarea{ width:100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 14px; background: #FBFAF7; color: var(--ink); font-family: inherit; }
+  .row2{ display:flex; gap:8px; }
+  .row2 .field{ flex:1; }
+
+  .item-row{ display:flex; gap:8px; align-items:flex-end; margin-bottom: 8px; }
+  .item-row .field{ margin-bottom:0; }
+  .item-row .code-field{ flex: 1.6; }
+  .item-row .qty-field{ flex:0.8; }
+  .item-row .found-name{ font-size:11px; color: var(--green); margin-top:3px; min-height:14px; }
+  .item-row .found-name.notfound{ color: var(--rust); }
+  .item-row button{ background: none; border: none; color: var(--rust); font-size: 20px; padding: 0 4px 8px; cursor:pointer; }
+  .add-item-btn{ background:none; border: 1px dashed var(--line); color: var(--teal); font-weight:600; font-size: 13px; padding: 9px; border-radius: 10px; width:100%; cursor:pointer; margin-bottom: 14px; }
+
+  .totals-box{ padding: 10px 0; border-top: 1px dashed var(--line); margin-bottom: 14px; }
+  .totals-box .trow{ display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:4px; }
+  .totals-box .trow.final{ font-weight:700; font-size: 15.5px; margin-top:6px; }
+  .totals-box .trow.disc{ color: var(--rust); }
+
+  .save-btn{ width:100%; background: var(--teal); color:#fff; border:none; padding: 13px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor:pointer; }
+  .danger-btn{ width:100%; background: #FBEAE3; color: var(--rust); border:none; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor:pointer; margin-top: 8px; }
+  .cancel-btn{ width:100%; background:none; border:none; color: var(--ink-soft); padding: 10px; font-size: 13.5px; text-align:center; cursor:pointer; }
+
+  .img-picker{ display:flex; align-items:center; gap:12px; margin-bottom: 12px; }
+  .img-preview{ width: 64px; height:64px; border-radius: 12px; object-fit:cover; background: var(--bg); border: 1px dashed var(--line); }
+  .img-preview.placeholder{ display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--ink-soft); }
+  .img-picker label.pick-btn{ display:inline-block; background: var(--bg); border: 1px solid var(--line); color: var(--ink); font-size: 13px; font-weight:600; padding: 9px 14px; border-radius: 10px; cursor:pointer; margin:0; }
+  .img-picker input[type=file]{ display:none; }
+
+  .cat-row{ display:flex; gap:8px; }
+  .cat-row select{ flex:1; }
+  .cat-row button{ background: var(--bg); border: 1px solid var(--line); border-radius: 10px; font-size: 13px; font-weight:600; padding: 0 12px; color: var(--teal); cursor:pointer; }
+
+  .disc-type-row{ display:flex; gap:8px; margin-bottom:12px; }
+  .disc-type-row button{ flex:1; padding: 9px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft); font-size: 13px; font-weight:600; cursor:pointer; }
+  .disc-type-row button.active{ background: var(--teal); color:#fff; border-color: var(--teal); }
+
+  #lockScreen{ position:fixed; inset:0; background: var(--bg); z-index:999; display:none; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+  #lockScreen.show{ display:flex; }
+  #lockScreen input{ font-size:24px; text-align:center; letter-spacing:10px; padding:12px; border-radius:10px; border:1px solid var(--line); width:170px; margin-bottom:14px; background:var(--panel); color:var(--ink); }
+  #lockScreen .save-btn{ width:170px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="htext">
+    <h1 class="display" id="shopName">King Enterprise</h1>
+    <p id="shopTag">Apni products ki bookings track karein</p>
+  </div>
+  <button class="gear-btn" id="settingsBtn">⚙</button>
+</header>
+
+<div class="stats" id="statsRow"></div>
+
+<main id="mainContent">
+  <div class="empty">Loading...</div>
+</main>
+
+<button class="fab" id="fabBtn">+</button>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="orders"><span class="icon">🧾</span>Orders</button>
+  <button class="tab-btn" data-tab="customers"><span class="icon">👥</span>Customers</button>
+  <button class="tab-btn" data-tab="stock"><span class="icon">📦</span>Stock</button>
+</nav>
+
+<!-- Settings Sheet -->
+<div class="sheet-overlay" id="settingsSheetOverlay">
+  <div class="sheet">
+    <h2>Shop Ki Details</h2>
+    <div class="field"><label>Shop / Business ka naam</label><input type="text" id="setShopName"></div>
+    <div class="field"><label>Tagline</label><input type="text" id="setShopTag"></div>
+    <div class="field"><label>Contact number</label><input type="tel" id="setShopPhone"></div>
+    <div class="field"><label>Address</label><textarea id="setShopAddress" rows="2"></textarea></div>
+    <div class="field"><label>App PIN Lock (4 digit, khali chorein to lock na ho)</label><input type="password" id="setAppPin" maxlength="4" inputmode="numeric" placeholder="e.g. 1234"></div>
+    <button class="save-btn" id="saveSettingsBtn">Save</button>
+    <button class="cancel-btn" id="cancelSettingsBtn">Band Karein</button>
+  </div>
+</div>
+
+<!-- Add Order Sheet -->
+<div class="sheet-overlay" id="orderSheetOverlay">
+  <div class="sheet">
+    <h2>Nayi Booking</h2>
+    <div class="field">
+      <label>Customer chunein (ya khali chorein naye ke liye)</label>
+      <select id="orderCustomerSelect"></select>
+    </div>
+    <div class="field"><label>Customer ka naam</label><input type="text" id="custName" placeholder="e.g. Ahmed Bhai"></div>
+    <div class="field"><label>Phone number (optional)</label><input type="tel" id="custPhone" placeholder="03xx-xxxxxxx"></div>
+
+    <label style="display:block; font-size:12.5px; color:var(--ink-soft); font-weight:600; margin-bottom:6px;">Products (code ya naam likhein)</label>
+    <div id="itemRows"></div>
+    <datalist id="productsDatalist"></datalist>
+    <button class="add-item-btn" id="addItemBtn">+ Product add karein</button>
+
+    <div class="field">
+      <label>Discount</label>
+      <div class="disc-type-row">
+        <button type="button" class="disc-type-btn active" data-type="none">Koi Nahi</button>
+        <button type="button" class="disc-type-btn" data-type="percent">Percent %</button>
+        <button type="button" class="disc-type-btn" data-type="fixed">Rs. Fixed</button>
+      </div>
+      <input type="number" id="discountValue" placeholder="Discount value" style="display:none;">
+    </div>
+
+    <div class="totals-box">
+      <div class="trow"><span>Subtotal</span><span id="subtotalDisplay">Rs. 0</span></div>
+      <div class="trow disc" id="discountRow" style="display:none;"><span>Discount</span><span id="discountDisplay">- Rs. 0</span></div>
+      <div class="trow final"><span>Total</span><span id="orderTotalDisplay">Rs. 0</span></div>
+    </div>
+
+    <button class="save-btn" id="saveOrderBtn">Booking save karein</button>
+    <button class="cancel-btn" id="cancelOrderBtn">Cancel</button>
+  </div>
+</div>
+
+<!-- Add/Edit Product Sheet -->
+<div class="sheet-overlay" id="productSheetOverlay">
+  <div class="sheet">
+    <h2 id="productSheetTitle">Naya Product</h2>
+    <div class="img-picker">
+      <img id="prodImgPreview" class="img-preview placeholder" src="">
+      <label class="pick-btn" for="prodImgInput">Tasveer Chunein</label>
+      <input type="file" id="prodImgInput" accept="image/*">
+    </div>
+    <div class="field"><label>Product ka naam</label><input type="text" id="prodName" placeholder="e.g. Shoe Polish Kit"></div>
+    <div class="row2">
+      <div class="field"><label>Product Code (optional)</label><input type="text" id="prodCode" placeholder="e.g. SC-001"></div>
+    </div>
+    <div class="field">
+      <label>Category / Range</label>
+      <div class="cat-row">
+        <select id="prodCategory"></select>
+        <button type="button" id="newCatBtn">+ Nayi</button>
+      </div>
+    </div>
+    <div class="field" id="newCatField" style="display:none;">
+      <label>Nayi category ka naam</label>
+      <input type="text" id="newCatInput" placeholder="e.g. Car Care">
+    </div>
+    <div class="row2">
+      <div class="field"><label>Price (Rs.)</label><input type="number" id="prodPrice" placeholder="0" min="0"></div>
+      <div class="field"><label>Stock</label><input type="number" id="prodStock" placeholder="0" min="0"></div>
+    </div>
+    <button class="save-btn" id="saveProductBtn">Product save karein</button>
+    <button class="danger-btn" id="deleteProductBtn" style="display:none;">Product Delete Karein</button>
+    <button class="cancel-btn" id="cancelProductBtn">Cancel</button>
+  </div>
+</div>
+
+<!-- Add/Edit Customer Sheet -->
+<div class="sheet-overlay" id="paymentSheetOverlay">
+  <div class="sheet">
+    <h2>Payment Record Karein</h2>
+    <div class="field">
+      <label>Kitni raqam mili?</label>
+      <input type="number" id="paymentAmountInput" placeholder="Rs.">
+    </div>
+    <button class="save-btn" id="savePaymentBtn">Save</button>
+    <button class="cancel-btn" id="cancelPaymentBtn">Cancel</button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="customerSheetOverlay">
+  <div class="sheet">
+    <h2 id="customerSheetTitle">Naya Customer / Shop</h2>
+    <div class="field"><label>Naam</label><input type="text" id="custFormName" placeholder="e.g. Ali Store"></div>
+    <div class="field"><label>Phone number</label><input type="tel" id="custFormPhone" placeholder="03xx-xxxxxxx"></div>
+    <div class="field">
+      <label>Discount Type</label>
+      <div class="disc-type-row">
+        <button type="button" class="cust-disc-type-btn active" data-type="none">Koi Nahi</button>
+        <button type="button" class="cust-disc-type-btn" data-type="percent">Percent %</button>
+        <button type="button" class="cust-disc-type-btn" data-type="fixed">Rs. Fixed</button>
+      </div>
+      <input type="number" id="custFormDiscValue" placeholder="Discount value" style="display:none;">
+    </div>
+    <div class="field">
+      <label>Custom Rates (is customer ke liye alag price - khali chorein to normal rate lagega)</label>
+      <div id="customRatesList"></div>
+    </div>
+    <button class="save-btn" id="saveCustomerBtn">Save</button>
+    <button class="danger-btn" id="deleteCustomerBtn" style="display:none;">Delete Karein</button>
+    <button class="cancel-btn" id="cancelCustomerBtn">Cancel</button>
+  </div>
+</div>
+
+<div id="lockScreen">
+  <div class="display" style="font-size:20px;margin-bottom:16px;">🔒 App Locked</div>
+  <input type="password" id="lockPinInput" maxlength="4" inputmode="numeric" placeholder="PIN">
+  <button class="save-btn" id="unlockBtn">Unlock</button>
+  <div id="lockError" style="color:var(--rust);font-size:12px;margin-top:8px;"></div>
+</div>
+
+<script>
+(function(){
+  const pin = localStorage.getItem('kb_pin');
+  if(pin){
+    document.getElementById('lockScreen').classList.add('show');
+  }
+})();
+function tryUnlock(){
+  const entered = document.getElementById('lockPinInput').value;
+  const pin = localStorage.getItem('kb_pin');
+  if(entered === pin){
+    document.getElementById('lockScreen').classList.remove('show');
+  } else {
+    document.getElementById('lockError').textContent = 'Ghalat PIN, dobara koshish karein';
+  }
+}
+document.getElementById('unlockBtn').addEventListener('click', tryUnlock);
+document.getElementById('lockPinInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlock(); });
+
+const DEFAULT_CATEGORIES = ["Wax Shoe Polish", "Liquid Shoe Polish", "Suede & Neubuck Shoe Ranovator", "Shoe Shinners", "Fleet, Joggers & Sneakers Cleaners", "Shoes Accessories", "Toilet Cleaner", "Bleach", "Toilet Bowl Cleaner Gel", "Blue", "Insect Powder", "Mosquito Repellent", "Tile & Bath Cleaner", "Dish Wash", "Glass Cleaner", "Surface Cleaner", "Plane & Perfumed Phenyle", "Hand Wash", "Anti Lice Shampoo & Body Lotion", "Cream, Body Lotion & Face Wash", "Protectant (Leather, Rubber, Vinyle, Furniture & Plastic)"];
+
+let products = [];
+let orders = [];
+let customers = [];
+let categories = [...DEFAULT_CATEGORIES];
+let shopSettings = { name: 'King Enterprise', tag: 'Apni products ki bookings track karein', phone: '', address: '' };
+let currentTab = 'orders';
+let ordersViewMode = 'list';
+let viewingCustomerId = null;
+let ordersSearchTerm = '';
+let payingCustomerId = null;
+let editingProductId = null;
+let editingCustomerId = null;
+let currentProdImage = '';
+let orderDiscountType = 'none';
+let custFormDiscType = 'none';
+
+function loadAll(){
+  try{ products = JSON.parse(localStorage.getItem('kb_products')) || []; }catch(e){ products = []; }
+  try{ orders = JSON.parse(localStorage.getItem('kb_orders')) || []; }catch(e){ orders = []; }
+  try{ customers = JSON.parse(localStorage.getItem('kb_customers')) || []; }catch(e){ customers = []; }
+  try{ categories = JSON.parse(localStorage.getItem('kb_categories')) || [...DEFAULT_CATEGORIES]; }catch(e){ categories = [...DEFAULT_CATEGORIES]; }
+  try{ const s = localStorage.getItem('kb_settings'); if(s) shopSettings = JSON.parse(s); }catch(e){}
+
+  if(products.length === 0){
+    products = [
+      {id:"p1", name:"SUPER KING TIN POLISH FAMILY", code:"SKTP-F", category:"Wax Shoe Polish", price:310, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAUGAQIEAwf/xAA0EAABBAEBBgQFAwMFAAAAAAABAAIDBBEFEhMhMUFRBjJhcRQiM4GRFULRIzRSYnKxwfD/xAAYAQEBAQEBAAAAAAAAAAAAAAAAAwIBBP/EACARAQACAgAHAQAAAAAAAAAAAAABAgMRBBIhMTJRoeH/2gAMAwEAAhEDEQA/AL+iIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiw4hoySAPVBlFzuuR5wwOefQLT4qU8oD7bQQdaLjdcdH9WKRg7kZC9I7THjLXAj0QdCLVrwVsgIiICIiAiIgIiw5wa0uPIcUHlZsMrR7Tz7BVbWvE0NQkPJfL+2Mf8AfZcvijXDC1xYQXElrG+vf2CrGntmsAl1P4uR7t4HE8Tj7clyZiO7VaWt4w6JPEGq6pOIYJhDnOyxpxn0XsdK1BzNo25zLnPP9uO3fPBeTYbbxBJHpkYO8aWOYMBxHQcOqkHX7TYw86WANrYDjIcbXblzUsl7Rrk6rUwWnyhEx63rGkWN2Lji4AEtLtocehyrNo/iipqb2w2g2nbdwbI3yPPqFV59I1K9qE5bVxKXbTo25+RcsukXIGyOkj2d15gTghUi0MTiv6fU4rMkchimGzI3mOhHceikIZQ8KkeFNYdqdb9OsOzbgbtV3nm9o5tKstOfODngVpJMItWO2m5WyAiIgIiIC4NasfD0HuHM8Au9QnioltAEf5DKD5x4gcXXGZdkbAwOwUr4VmihsQvme1jN24Ek4HJQ2tMedQOGOI3bMYaey56bNmzGZ4pXQ5+YBruX2WbRvS2LJFN7jvGl3NutPZ0202VkLYn7DoC7yDoQkd+oysYZXsfHLak2gDxaM5a78qrtbRx/Z2j3yxxyMdOPA59+qMZX3kwOnWHBz8xuEbvkbjt149FzllSc9Z6a+rPYt1LL7sIsxs3kzJA9ziGyAAZbkKI12eu+WQ15S5m7AcdokF2OhPEhcLa9cSOd+m23NcMBu4d8p48efXgo7UWxtlbu60lcYwWyAgk5PHj6YSabdrxMV7R9/Gun230L0FqM4dC8O/kfhfUi5osudH9OQCRns4Z/lfJWjJA7r6hScXafphd5jUjytvIsVZ2WBey56nkC6EBERAREQFFeI4DNpUuObRtD7cf5UqtJWCSNzCMgjqgrd2zK6lTtQyuaySPDsH9wUeb1vpPJ+VIVGivadpM/ygkurvdyPp7qLtsMV18b22XSucSIWcSP4HqVGcl4nXK1qPbys6lchgkk+JmIa0nzFZvzXqnhk7yew61MA4uDnZbtEE/gcO6wZI9643LkVMZzstsh7h7howPyumC3MXRQ0ass9YeezMDG0cefHGVycmXXSn13VfaNbLZpeFZbMtmY2JgNlz5HEgHljj2yeSga+rannd72S0zGXQzDetI9QVP+J9YpyVGafSc2eVpAdMBwYB0B/wDBRlLT5LNQxxuMcBGZZvKHn1J5NHbqeKuw5dRpRsmrTVGgR2m7TYw7a2Hg4LQeozjHuvorId3NDWGCK8TIsjuBxVa0SrBPdimjy7T9Lbhr3D60pOf+ePsB3Vu06BziZZPM87RQSUDcMC9VhowMLKAiIgIiICIiCO1fTGahD1bI3ixw5g91XrcUFxza+usMdhrdiO00Za4dirkuezThssLZGA558OaCku8M2ajxPQeHsx8skWy7HqOHA+yjrumSu/qatee1vR073En2bnJ+wVxk0OSJj2053w7fMxuwR7Z5KFm8HyzOJmnuSg/5FpJ+6CBMVGlksrbTmAESWyA0/wC1g5/c/ZZgpXtdsGSWzI3TmHhI9uyAOzW8sq0VfCUMb2vfAJHjGH2H7ePsp2vpkcZDpDvHDlkYA9gg4NO05oiijjiMVWH6bDzP+o+qm4owxq2a0DktkBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREH//2Q=="},
+      {id:"p2", name:"NEW KING TIN POLISH FAMILY", code:"NKTP-F", category:"Wax Shoe Polish", price:180, stock:0, image:"data:image/jpeg;base64,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"},
+      {id:"p3", name:"SUPER KING TIN POLISH LARGE", code:"SKTP-L", category:"Wax Shoe Polish", price:178, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAUGAQIEAwf/xAA0EAABBAEBBgQFAwMFAAAAAAABAAIDBBEFEhMhMUFRBjJhcRQiM4GRFULRIzRSYnKxwfD/xAAYAQEBAQEBAAAAAAAAAAAAAAAAAwIBBP/EACARAQACAgAHAQAAAAAAAAAAAAABAgMRBBIhMTJRoeH/2gAMAwEAAhEDEQA/AL+iIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiw4hoySAPVBlFzuuR5wwOefQLT4qU8oD7bQQdaLjdcdH9WKRg7kZC9I7THjLXAj0QdCLVrwVsgIiICIiAiIgIiw5wa0uPIcUHlZsMrR7Tz7BVbWvE0NQkPJfL+2Mf8AfZcvijXDC1xYQXElrG+vf2CrGntmsAl1P4uR7t4HE8Tj7clyZiO7VaWt4w6JPEGq6pOIYJhDnOyxpxn0XsdK1BzNo25zLnPP9uO3fPBeTYbbxBJHpkYO8aWOYMBxHQcOqkHX7TYw86WANrYDjIcbXblzUsl7Rrk6rUwWnyhEx63rGkWN2Lji4AEtLtocehyrNo/iipqb2w2g2nbdwbI3yPPqFV59I1K9qE5bVxKXbTo25+RcsukXIGyOkj2d15gTghUi0MTiv6fU4rMkchimGzI3mOhHceikIZQ8KkeFNYdqdb9OsOzbgbtV3nm9o5tKstOfODngVpJMItWO2m5WyAiIgIiIC4NasfD0HuHM8Au9QnioltAEf5DKD5x4gcXXGZdkbAwOwUr4VmihsQvme1jN24Ek4HJQ2tMedQOGOI3bMYaey56bNmzGZ4pXQ5+YBruX2WbRvS2LJFN7jvGl3NutPZ0202VkLYn7DoC7yDoQkd+oysYZXsfHLak2gDxaM5a78qrtbRx/Z2j3yxxyMdOPA59+qMZX3kwOnWHBz8xuEbvkbjt149FzllSc9Z6a+rPYt1LL7sIsxs3kzJA9ziGyAAZbkKI12eu+WQ15S5m7AcdokF2OhPEhcLa9cSOd+m23NcMBu4d8p48efXgo7UWxtlbu60lcYwWyAgk5PHj6YSabdrxMV7R9/Gun230L0FqM4dC8O/kfhfUi5osudH9OQCRns4Z/lfJWjJA7r6hScXafphd5jUjytvIsVZ2WBey56nkC6EBERAREQFFeI4DNpUuObRtD7cf5UqtJWCSNzCMgjqgrd2zK6lTtQyuaySPDsH9wUeb1vpPJ+VIVGivadpM/ygkurvdyPp7qLtsMV18b22XSucSIWcSP4HqVGcl4nXK1qPbys6lchgkk+JmIa0nzFZvzXqnhk7yew61MA4uDnZbtEE/gcO6wZI9643LkVMZzstsh7h7howPyumC3MXRQ0ass9YeezMDG0cefHGVycmXXSn13VfaNbLZpeFZbMtmY2JgNlz5HEgHljj2yeSga+rannd72S0zGXQzDetI9QVP+J9YpyVGafSc2eVpAdMBwYB0B/wDBRlLT5LNQxxuMcBGZZvKHn1J5NHbqeKuw5dRpRsmrTVGgR2m7TYw7a2Hg4LQeozjHuvorId3NDWGCK8TIsjuBxVa0SrBPdimjy7T9Lbhr3D60pOf+ePsB3Vu06BziZZPM87RQSUDcMC9VhowMLKAiIgIiICIiCO1fTGahD1bI3ixw5g91XrcUFxza+usMdhrdiO00Za4dirkuezThssLZGA558OaCku8M2ajxPQeHsx8skWy7HqOHA+yjrumSu/qatee1vR073En2bnJ+wVxk0OSJj2053w7fMxuwR7Z5KFm8HyzOJmnuSg/5FpJ+6CBMVGlksrbTmAESWyA0/wC1g5/c/ZZgpXtdsGSWzI3TmHhI9uyAOzW8sq0VfCUMb2vfAJHjGH2H7ePsp2vpkcZDpDvHDlkYA9gg4NO05oiijjiMVWH6bDzP+o+qm4owxq2a0DktkBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREBERAREQEREH//2Q=="},
+      {id:"p4", name:"KING SHOE CREAM (50ML)", code:"KSC", category:"Wax Shoe Polish", price:290, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAQFBgMCB//EADUQAAICAgAEAgYHCQAAAAAAAAABAgMEEQUSITEGQRMUUWFxgTIzUqGxweEVJGJykZKi0fD/xAAZAQEAAwEBAAAAAAAAAAAAAAAAAQIDBAX/xAAgEQEBAQACAQQDAAAAAAAAAAAAAQIDESEEEzFREhRC/9oADAMBAAIRAxEAPwDfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHG23lk4pfM7ES/65geZz5YSk3pJN7IGJxGq+yuqN6nL+VpyJOZLlw7n7IP8AAyvCrOTPqf8AGg248TUrYqTT31JFVnpE+nYjHXF7yDFIAAAAAAAAAAAAACvzrJ1+knXFSlFb03osCg4nnckrYRjttNdewWzLb4VOT4g9NTOpxjFTWm1srKsimqamrHtPfY4TxbXL6P3M9ywbFXzKUG/spPf4Dqfbab1n4yu6vENt1kIQUOabSW0afDb2+bW9ddGAxMe6u+ufL9GSfZm04VlemsacdNoeFNS2d9dLUABkAAAAAAAAAAA+x89ujnY9soWK6LTfR7Z9CMl4oryaLp5dGa4b6KnkT3pddFN5/J0en5vat8d9qhZWTHvJ/OJ69eyta3/iiD+2eIQslDmpscZcr3BLr/yJFvFs+rHjc3iPmeuWMdtfeZe3ft2ft4v8OjyMqXaU/kifwOnMt4tROUbHCEuaTl2S0yvwcziefTbbGdddcHy7jCPfW/M0XhqGQsix5Fzsko615fci2eKy92s+T1k1mzOemjABs88AAAAAAAAAAAy/imiVslKvEvvuj2dU0uVe9P8A0ag52U1W/WQjL3tAj5lixyqMmFl2NZQqtuKePKfNJ93J+ffzLJcTntr0XWOkv3ae2u/xNu8OnyU4/CbHqdf2rP72V6Xm7PhguHWZOLDIppxbbq7bFPcsefs69P1NL4deXO+yWTSqko9EoqPn7Nt/1Lj1Kjzi5fGTZ2rrhUtVwjFe5Eq16ABKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACseJxLyzFvmb37vJa/P3gAd8GnLqnL1m1WJpddt9fy/QAAf/Z"},
+      {id:"p5", name:"KING LIQUID LARGE POLISH (75ML)", code:"KLL", category:"Liquid Shoe Polish", price:251.5, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAEFAgQGAwf/xAAxEAACAQQABAUCAwkAAAAAAAAAAQIDBAUREhMhMQYUQVGxIoEVcZEkNUJiY3OhsvD/xAAYAQEBAQEBAAAAAAAAAAAAAAAAAgEDBP/EAB8RAQADAAEEAwAAAAAAAAAAAAABAhESAwQhMUGR4f/aAAwDAQACEQMRAD8A78AAAAAAAAAAAAAAAAAAAAAAAAAAAAAI2NnP3OerSznkrGNKdKjFyuKk09R/LQHQ7BVYnP2OVnKlQqrnQ7wfqvde6LQCQAAAAAAAAAAAABkAiTSTb7LqBTeJcwsZZOFJ8V1W+mlBd9v1OOyVZ4fF+ST/AG25+u5mn10/QyvqzrVauWu57nNvkw7pR306HPXtereXTqS61J6A3vDVpWvczQdKcqapyUnNPTWj62mmcB4atfLuHB37yZ3VFvhWwPdAhEgAAAAAAAAAABB43L1bVX/I/g9ma969WVd+1OXwB8iuLqdejTpt/TTjpGOPipZGkn2LOjY207Kjx0JNygm5RT2aVzYyx9SFem5ui3pqS6x2c69SJnHqv2t6V5e3fYe04IKTXVl9TWkVeCrRusbRrLW3HUte67lvE6PKyRJCJAAAAAAAAAAEMAzVyL1j7l/0pfDNlmpk/wB2XX9mfwwNPF3FC3wmMjU6SqW8FHUd7fCiHdWl1SqW1zKNaNX6ZRcNaTPTD0oVcDj+Nb1bU/8AVHpOdlRrKE5wjJS0k5dW9b7eyJmJ3dXE1zJhTeG6VXD5K5w9duUNc63m/wCOPZ/ddNnUI5/KX9vPHUMtTe/K3C1LWtxb4ZL8mnv7Iv4Pa6PaKQzJIRIAAAAAAAAAAAYs1ciuLH3K96Uvhm2eVaHMpTg+0otAVONq1I+G7BW8qarO3p8PMTcey32NBWFWpOpOs6SqTjwTq7lJ6b29LXqctc2OYsZ+X51Phh0i0+mv0PFUMtLvcQ/77ETsu9eEfM/X66TxFChTx2PxVrPauLlOW3t6XV7/AF/wddby3Ba7eh8+wmMunkqdxdVYz5afCl7s+gW0dU0VDlbN8NhEhA1IAAAAAAAAAABjJbRkAKfI4+NxttdSr/CJp9DqnFMx5S32MxuqbH450p7ZdQjwomMEjI1gAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//Z"},
+      {id:"p6", name:"SUPER KING LIQUID LARGE POLISH (75ML)", code:"SKLL", category:"Liquid Shoe Polish", price:251.5, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAMAAwEAAAAAAAAAAAAAAAEFBgIDBwT/xAA6EAACAQMBBAUJBQkAAAAAAAAAAQIDBBEFEiExQQYTUZGxBxQiIzNhcYHBJDJCQ9ElUmNyc4OTofD/xAAZAQEBAQEBAQAAAAAAAAAAAAAAAQIDBAX/xAAhEQEBAAICAQQDAAAAAAAAAAAAAQIRITESAwQiQVFSYf/aAAwDAQACEQMRAD8A3hJAAkAASAAABAEggATkEACQCAJAAEAAAAAAAAGZ6QdJp6feRoWihJw9q5LK+BZ69qsdLsXKLXXT3U19TzO4rSqVJSk25N5bfNmM8tcR0wx3zXomldJrLUNmE5KjWf4ZPj8y7PHaEHUlu5HpHRWV3LTPtU3OCeKTlxwMbaZ4ydLoAG3NIIJAAACASAABIEHVdV4WttUr1XiFOLkzuM/01rujobinjrKii/hxCzmsbq+rT1K9dSvPYWMRSW6KKuUJbaSxLPBp5TOmcnKTbOVF4fFo5a29HTQaDpjvbunRX3VvnLsR6PTpxpU406a2YxWElyKforY+a6VCrNeurLak8cuRdHSTThld0AJKy4g5YIAAYAAkAAAABlPKDLGkUF21vozVmR8ob/Z1qu2q/Al6ax7YDZeM4eO3Bzo4U03wymWfm1zGMcW1RrH7rOE7OpPL83nCX8vE4ef5j6GXt5r45beq2ri7Wk4Y2XCOMdmDtKLoheu70WFOb9bbvqpJ8fd/ovT0R86zV0AAIAAAAAAAAAAAZDyh77KzXbVl4GvMh5Qd9vYr+JLwRL01j2up16VtSp9dUUE1hZ57j54XkVdS27ql1az6L4pZa+j7jvubSndUoRqRTcd8c8njGT556XRclKahJt7sp5bec8/e/wDkSy/TWPhrl2WsI0tVV7b+wu11dVLhtr7svnvXcXRXW1ONCnGi9+W3l83nLLBPKyaYvfCQAEAAAAAAAAAAAMl0+WaFj/Ul4I1plena+z2b7KkvAlXHteNqMNqTSSW9spdQ1G4ncwjp+zLHoqbWVl8Xjmkvqcq+s2dei6UouUJLEozg3nuZ8iuNLjLMaOE+MUpJd20ZuU+q6T0c/wBa5Qnd1tRtqcKlWpToVFHa4pvm5PvNLa3Cq169HHsdnf8AFZKKjrVnbpRhDZgvwxp4+pa6I1WoVrvDSuarnHPHZXorwGN/qZ4ZY82aWQANuYAAAAAAAAAAI3ma6aUatezt3TpTnsTedmLb3r3GmICy6eUOhXX5FZf2pfoFQuH+TW/xS/Q9X+YJprzry2jYXdWcYwtq7cnhPqpY8D02zoK2tKNCK3U4KPcjtJEmmblsABUAAAAAAAAAAAAAAAAAAAAAAAAAAB//2Q=="},
+      {id:"p7", name:"NEW KING LIQUID POLISH (75ML)", code:"NKLL", category:"Liquid Shoe Polish", price:251.5, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAMBAQEBAAAAAAAAAAAAAAUGBwQBAgP/xAA8EAACAgECAwMGCgsBAAAAAAAAAQIDEQQFBhIhEzFRIkGBobHBBzJCUmFicZGS8BQVNUNEU1RzdILR4f/EABoBAQADAQEBAAAAAAAAAAAAAAABAgMEBQb/xAAiEQEBAQACAgIBBQAAAAAAAAAAAQIDEQQSMUFREyFCsfD/2gAMAwEAAhEDEQA/AL+AAAAAAAAAAAAAAAAAAAAAAAAAAB82TjXXKcniMU239B9EbxFd2GyaqSeG48i9LwRb1O1sZ9tSflW7931t107I3zhGTzGMXhJH5/rLXf1Vv4jh093LhSWUSFU9HlSsU5L5q6Z9Jwd6v2+jvHjE6mUvw9uN110qNROU+ZZhKXiu9FhKbo9ZndNNYoxrgpqMYR7op9PeXJHXw67y8fzeP03LJ12AA1cQAAAAAAAAAABA8ZScdkx862CJ4rfHlrq2GMkk328cZ9JGp3LGnFqZ3NVU630Omt+S+nQh9NuPmtg0/qolKNbUoSxzvP0YXrOG8Wu/h7s8rjue+3RVPlnCXhNP1mhmT2blON8YwhHkcl1afiavHuR0cOLmXt5nm82OWz1+noAN3CAAAAAAAAAAAQfGOj/TOHdRy/Gpxcv9e/1ZJw4d8sjTsmunP4qon7GBnlG6aGMOWdacl8pyaydEdz29wXkxTx39oRGg2i3W6GV9SfNCWG5SSivtJfcNn1V9Maq9BRpnXhyn2qxj7vExucy9PQnPz2d/7+31XDT7xrtDp6ZQSncnKEW8qKy2/uRo67jNOFq3oOKtNVfjm8qHR5WXF4NLNMySfs5OXet6718gALMgAAAAAAAAAACvcdXunhq6K/ezjX68+4sJV/hC/YFf+RH2MCj7XrtdUnpdJKtRk3Jqa6Ppj3kvPW74oWOy3S8uOaSeOuF4fnzETo74RdFFmj0cubp2t2UvHymdDdMKHKdG3z5VlKM8zfX8+gj1i85NT7fjTr7ZbtRrrZZsVsJtpY86NdMe1N0b7oSjRXSlhYrXR9TYI/FX2Eq223uvQAEAAAAAAAAAAAFX+EFZ2Gv+/H2MtBXuN6ldw9N/y7YSf3494Gcrs7FibajhZeOucd57RpnKTlFSlXH5SiS8dipsXNVqrVH69DfrTOqG0WuvkluD7NruVM8YK+0/LX9Hkn8UFOEVKuUebDljr6DYV3IzLU7XCnUaWuN1llll0YNSr5Ek35uuTTiZZfhTWbm9WAAJVAAAAAAAAAAB41lEPxDRO3ZtZWk23W3HHna6+4mTyUYzi4ySafemBl1G9Kt9aZ/Znoda4gg44Wnkl4Z/9LnZw5tFkm5aCnL8E17D4XC+zL+Bh+KX/Snpl03yuS/KpbPfLc9+0MFVPFdnaSk3nokzRDl0e26LQNvSaaupyWG4rqzqLSSTqMd8muTXtoABKgAAAAAAAAAAB6AAAAHgAAAAAAAAAA//2Q=="},
+      {id:"p8", name:"KING LIQUID NEUBUCK SPRAY (140ML)", code:"KNS", category:"Suede & Neubuck Shoe Ranovator", price:127.6, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAMEBgUCAf/EAC4QAAICAgAEBQIFBQAAAAAAAAABAgMEEQUSITEGEyJBUWGBFBYycZE0cpOhsf/EABkBAQEBAQEBAAAAAAAAAAAAAAADAQQCBf/EACIRAQEAAgIBAwUAAAAAAAAAAAABAgMRIRIEEzEFQUJRof/aAAwDAQACEQMRAD8A34AAAAAAAAAAAAAAAAAAAAAAAAAAAACO2zy4p63t6PKue0nFdXrufMrrGC+ZHiS04P6oC0AAAAAAAAAAAAAAAAAAK1sm79Pqkk0fZPocniPGa6MpqmPm6WpP4f0Kv5hscetEfptSRWas79kbv1z8mlqblXFvu0eyrw/Lpy8ZSplvXRp90y0TssvFVllnMAAY0AAAAAAAAAAArcRm6uH5E1vca5Pp37FkhzP6S3+xmz5ZfhgIZPOlqi//ABsnuzMm+MY3V5M1D9Kdb6HVx8qT3H1afSOoPe9b+fgmqyFCc4y87cXytOL6Pv139Drvq5LHJPp04vVV/Cts3xG2DqtrXl7fPFpPqas4/CrldmTa36U11+x2Dn25eeXk6Nev2sfCAAJqAAAAAAAAAAAEGdNV4N83vUYNvX7E5FlwjZi2wktxlBp/sBisHiMLnGa1JUr0bXK4ppp/vvuWbM1zx7VaozhJtya/U4+y+3sesOHCHVdVzXUxx7HVKMrHpvr2+eh0L+H4dOPK1O1rW1qzvvqer7U7qs25q/hrOpyOIW11xafLzfp0tdF/JpzhcBxsdT/F11cl1icZety7P6ndMtxvePwnebewAGMAAAAAAAAAAAIM6Uo4V8ovUlXJrp76JyvnvWBkPvquX/AMJwfElz3xtbtndy2ShrXLLrtr+S9nZNfNW/xDnyR5ZQTa2vn7HPryXRdK6ucJza6RUeZff4KVeO7MnzLdxrnLc5N66PuSmnK3nJW5SdRrvC+ZTdZOmiqVcY7fqfds0hkfC0KquJyjVfGyPlvpp79u/sa4rxZ1U6AAMAAAAAAAAAAAK2e0sO5P3g1/oskd1atrlCS2mtMQrAwgqLJOlyhvo9PuepWSlBx8ybi+65ujNDd4epm/TbbBfC0Qx8MVp9cm7+Ejvm7W+bdPqP3/AFX8LQhDiEnFabgzWnO4fwqnCnzw5pTa1zS+DonJtymWXMdunHLDDjK9gAJqgAAAAAAAAAAAABoaAAAAAAAAAAAAD//Z"},
+      {id:"p9", name:"SUPER KING LIQUID NEUBUCK SPRAY (150ML)", code:"S-KNS", category:"Suede & Neubuck Shoe Ranovator", price:129.8, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAQHAgMGAQX/xAAyEAACAQMCBAMGBQUAAAAAAAAAAQIDBBEFBhIhMUETIlFhcYGRobEHFSMyQhYzNJLB/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAEC/8QAHBEBAQACAwEBAAAAAAAAAAAAAAECEQMhMTJB/9oADAMBAAIRAxEAPwDvwAAAAAAAAAAAAAAAAAAAAAAAAAAAAGFWXBTcl2NbqyWOfV+hncf2WvVo1TWIp+jRRJABAAAAAAAAAAAAAAAABpqv9SPuPH0PZpVGsNrHdB0+X75/QDOi800ZmFNpLhXYzAAAAAAAAAAAAAABruJcNCTRsI9/PgtJy933A5/VN222kXSt6ttWqTxnMGkvqRH+IVnj/Buf9onL7onCeuXKqZylFRfpz5k++sbejaalT/KvBp0uKdK6aeGswUFGXfi8zfvKPvabvO31HU7e1pWdaEqsscUpxwvkdcVLt2MVuqxUOHhc8+Xp0ZbRne1ymroABUAAAAAAAAAAANF5FStZqSyuX3N5D1ao6Om1qi/ik/qhelis900+DWbptZbUGn8cH2NYhc0tvqjVtbOpJJSc6LioW6z/ABXFmUvcsEbe9F+Nb3lPnSqpJ4791/02atXuI6TVq1Lq8uKF3FxpUnRUfBXLPiPHVdF69Qt/HzNAz/Vtk33ny5Y7FsFTbbjjdVl53PzfuffqWySeLn9UABWAAAAAAAAAAACBriT0i5Uujjz+ZPIupRU7CtGSymufzJe4s9cfOzq323a1vVnGrOi/0px6tdVn25+5ydTVNSrwdKtfXU4S5ShKq2n7Giy7C2TtakVTlGMotRk5Zz8OxXWq2yoanXglhcXEvjzM8eNmOsmsrLluJe3oNbqssrD4uf1LVKv2/HG5rPviS5loGp4cn1QAFYAAAAAAAAAAANdwm6Mkk2/RGwAQoVI45vD9qwcjqu2Ly9v516da2jCSS80nn7HdOKZj4aLscboe1a9lqVG4qXNOfhyzw04N/Vnaniil0PSAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//Z"},
+      {id:"p10", name:"KING RANOVATOR SMALL (120ML)", code:"KRV-S", category:"Suede & Neubuck Shoe Ranovator", price:179.3, stock:0, image:""},
+      {id:"p11", name:"KING RANOVATOR SMALL (GIFT) (120ML)", code:"KRV-S-G", category:"Suede & Neubuck Shoe Ranovator", price:280.5, stock:0, image:""},
+      {id:"p12", name:"KING RANOVATOR LARGE (GIFT) (200ML)", code:"KRV-L-G", category:"Suede & Neubuck Shoe Ranovator", price:363, stock:0, image:""},
+      {id:"p13", name:"KING POLISHING SPONGE SMALL (ROUND) (LIQUID REFILL)", code:"KPSS", category:"Shoe Shinners", price:150, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAQFBgIBA//EADoQAAIBAwEFAwgHCQAAAAAAAAABAgMEERIFBiExQRNRYRQicXKhscHRFSMyMzRCkSRUY3OBkpOi4f/EABkBAQEBAQEBAAAAAAAAAAAAAAADBQQBAv/EAB8RAQACAgMBAAMAAAAAAAAAAAABAgMRBCExMxITMv/aAAwDAQACEQMRAD8A34AAAAAAAAAAAAAAAAAAAAAAAAAAAEXaV9T2dZTuaqctPCMVznJ8kvSBJlJRi5SaSXNt8iI9rbOUtLv7VS7u2j8zH3Vetf1e0v320s5jRTfZQ8MdfSzn6tLCtLRL+VE5Z5Vd9Q7a8K8xuem8p1IVIKdOUZRfJxeUzowltXdrVVS0xaz/AIf2JeEo8n7zX7Lvo39qqmnRUi9NSGc6ZfLqimPNXJ1CObj3xe+JgALIAAAAAAAAAAAGa3tqPymxpZ81KdTHe1hL3s0pmN7YPyuzn0VOovbElm+crceN5aqiDUYprDzzPpTpzrRc4xjpTax3nlGFGpFqo4xgoN5azh47up942dtpjmahJ1dMeKace/wyvaZ9MU2jbWyX1OvEObSxFR87HnF1utUflVaHSVNN+lPHxK6rRhGEnTaxFrEtX2+HHh0wyw3XWb6tLuptf7IpirNcsQnyLRbBLTgA0WOAAAAAAAAAAAZvez7y07sT+BpDPb2L8M/WXuJZvnK/G+tVT9GXHYwrRzCLSepSS5nD2ddqolKpLHP7xZwS6FHaUreGjtpQcVp85YxjpxPhe3Fayg3czqU9MdT45ws46eJxxXUfzLQm077tCO7OrCqpVKsmua87OUXO634q49X4lLPaMKlx2Eqj7bhlT58sl3usv2i59Ve88xb/AGxuDN8J00gANJkAAAAAAAAAAAFDvVHNGhLuk0XxSbz/AISn6/wZLN85X4/1q87erb7JoToW87io4RShH0c2Zm4ldXc6jr2txUnUqxlUSovKjHlBLkl4tsvae1oUrOjTpQc6kYJPVwinj2ldc3d3dNurVxTX5Fwj+nU+Jz0rGlq8W97TM9QqPo7trmte3jdGrOpqp0oSUtPH8z+XH0Gq3V41rl+C95RZ7RuTTwv0RfbrL6y4x3L3kaZJyZYmXTlw1xYJiGiAB3MkAAAAAAAAAAApd5lm0pev8C6IO1KCubSVOXDqn3M+MlZtSYhTDaK5ItLGyhUai1JpeDwfNqq2o5lx6a/+Emqla1HGtOMWljE3hEZ1qDllXND+8zYiY9htbpbvbpwqOrozJw8J8vYaLdeOJXH9PiUdOrGS8ydNp9YvJq9j2sbW10p5lLjJl8FbTfevHNyr1jHNd+rEAHcygAAAAAAAAAADma4HR41kCHO0oVG3OhTk/GCZ8/o+1/daP+OPyJ+kaTzT6/JDhZ0IPMaFNeiCRLp/ZPdJ6lgPJnb0AHrwBzKcYOKlJJyeFl833HQAHMZwlKUYyTceEknyAHQAAAAAAAAAAAAAAAIm0bN3tOFNT0LL1NPDScWuHjxIL3dpatXlNfPBYysNJYSa6/Hj3sACZs6ylZ64yqKaaiovGHhLqAAP/9k="},
+      {id:"p14", name:"DOUBLE KING POLISHING SPONGE (ROUND)", code:"DKPSS", category:"Shoe Shinners", price:154, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAEFAQAAAAAAAAAAAAAAAAUBAgMEBgf/xAA0EAACAgIBAgQEBAMJAAAAAAAAAQIDBBEFEiEGMUFREyJhoTKBkdEjcbEUFTNCUmKSwfD/xAAXAQEBAQEAAAAAAAAAAAAAAAAAAQID/8QAGxEBAQEBAQEBAQAAAAAAAAAAAAECETFBIQP/2gAMAwEAAhEDEQA/AO/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAU6l6dy34sd62t+2wLwU2VAAAAAAAAAAAAAAKSkorbILnfEePxUXB6svflBeS/mZPEHLLjePnen87+SpfX3PLr77Mi6VtsnKcnttlRM5niDls9ufXZCr/ZF6SMj4/OhQ8h5VnV09TenrX6GfhMTFv4mudst2ucoxrc2oz7bSfsiTfG8c40wcuhutymnNtP5fLz7NP09TGta+O+f49nb9QWB4i5PEXVGcrK157Xb9fI7PhPEmNyaUJP4d3qn6nN8xh41PF3SprqqUZah0z27I+j8/2OaqtnTZGyuXTKL7M1L1y3i4vHsyeypB+GeXXJYCcn/FrWpb9icCAAAAAAAABZbLpqlJeaXYvMWT/gTA4Xxt8bIzKsavXw6YLe36vucyuPyPaP8AyJ7xrF/30t2OtSgtPb0yGhgZNmtWpr36xdZnqc6zY9NtNShLHqm9t9Tk9/0N3Cqtssklg0S3JNdW9LS12KYmFTjtO/Ij1e3VtmPL5t96cFfDW9OyXZv9jld3V5iNzk9b/JVYNON05SqhN6fRRH5uz9/QgrLsLeq8SzXvK3v9kS1PF9T+Fcsa+2cXcrnbJbgpab8u6Xn9V5Faa8S2qu2OFiJTSai3J+e/uWZs9q/l8XeDcuNXMKuClGNnbpb3/wC9D0WL+VHm/CY3wfE1CrlGSk+rUV2iury+x6RD8P5nX4wuABAAAAAACkoqUXF+TWioA4nxzgSuxKcyKblV8k9HL42Pj11Vu+U3bauqEYQUml6bTaX6nquXRC2E42RUq5rU1/2cHy/h7J42/wDtFDduKvptwX191/QqInIocKMZue/iqVjU5baSek3r07No0rJud3WvPt3a837kzg4S5PMshZkJ7rdknFN700u739TZlwNEO3U33f8Al9vzA0aOT5O63rx/hQlGLXy1xitb6n+r80ZKrbaMeEb500ut9ME6Or0KZuPHDz54qW64SjqWv9SX7kjxvBz5NRucZRgpvTl2/P6lkh+xI+GcR3Z8s6UlLoh09UYKKb9O36nXRWopGthYleLRGqpahH7v3NolUABAAAAAAAABisujBdzTlmVQlrT6fb2N+UIy80mYp4ePP8VUX+QEXHi+OtyHkYuqbmtOVTS3/NeX2MkOKuhJt598k/Rxj+xsT4bj5vcsWvfv3RcuLxIrSraXt8SX7lGmuIwKLpZGR/EtlJS67pbe15aNyGTVKXTHfT9CsOLwoS6ljV9Xu1t/c2I01x/DCK/kiC6MlJdi4okkVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//2Q=="},
+      {id:"p15", name:"DOUBLE KING POLISHING SPONGE LARGE", code:"DKPSL", category:"Shoe Shinners", price:165, stock:0, image:""},
+      {id:"p16", name:"KING POLISHING SPONGE LARGE (BOOT SHAPE)", code:"KPSL", category:"Shoe Shinners", price:165, stock:0, image:"data:image/jpeg;base64,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"},
+      {id:"p17", name:"SUPER KING POLISHING SPONGE LARGE", code:"SKPSL", category:"Shoe Shinners", price:188.33, stock:0, image:""},
+      {id:"p18", name:"SUPER KING POLISHING SPONGE ORANGE", code:"SKPSO", category:"Shoe Shinners", price:188.33, stock:0, image:""},
+      {id:"p19", name:"NEW KING POLISHING SPONGE CURVE", code:"NKPS-C", category:"Shoe Shinners", price:185, stock:0, image:"data:image/jpeg;base64,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"},
+      {id:"p20", name:"KING JOGGER CLEANER SPRAY WITH BRUSH (120ML)", code:"KJC", category:"Fleet, Joggers & Sneakers Cleaners", price:319, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAEFAQAAAAAAAAAAAAAAAAIBAwQFBwb/xAA1EAACAQMCAwUFBgcAAAAAAAAAAQIDBBESMQUhQQYTUXKxFCIzYYEVNHGTodFCUlSCkcHw/8QAFwEBAQEBAAAAAAAAAAAAAAAAAAECA//EABwRAQEBAQADAQEAAAAAAAAAAAABEQISITETUf/aAAwDAQACEQMRAD8A9+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAt3E3ToSlHdbGI6tWUE9bRk3f3eS6vYx6cfdw0Bk0e8y1PPLqXQgAAAAAAAAAAAAAAACkmlFt7JAa6VaVSpLMnpzyT6F2D/wCwa2F/Z6nm7t/zY/uZEOI2P9Zb/mx/cYNjSm9WG88i8a+2vrSrXjCndUJze0Y1E2/pk2AAAAAAAAAAAAAAALdx93qeV+hcIV/gVPK/QDincVJSbVJtZzyXQ2F5R4d7MlZxqSrLGVKDXLrkzbPiNrC3oUp1O6lSlGUpreWJt6H8sPK+Zn/bvDZXdSrUhr0Uowg8Y1rKbi/qspjbrrOY1/ZGl3XaSycuUpavdcWmuR1I57wi6o3PaXhyp3NS4nF1HKc89ea329DoQ+sdSS5AABkAAAAAAAAAAAhW+DPyv0JkK3wZ+V+gHJ6FnSquDd3CCbevLj7u72znol9S9S4dQaUp8RoxelyxyeH/AC776f15EOGWN1d1qsbdvDk8rCNouzF/RoN06sG3/CsP/RuXmXFOA2tvQ7RWfdXarT1zUksYSUeT5ePM6Ic07L0J0e1FBVObTfPx5HSydTPiAAMgAAAAAAAAAABCr8KflfoTIVfhT8r9APGcHrU7bhT7uVKNec5c5vC33f4eBJWd/daqcbp6HNTlKWZamnnbpttsa7hV1GhXqUqtOE6cpN4l0ZuJcUtYU3opJSS5e/nn+GTpdl8cZ++9Ro04R7X03HGW25JdG1sevPCcBqSrcepVZvMpSfoe7J3z4ZKsu+wAGFAAAAAAAACjRUAQal4kJpuEk84aaLuBpA8nLg9LXj2irHGykk8foXIcGp4x7ZLHkiencE9yndx8EdP16/rPhGksOE0qN3Tq9/VqSg8pPCS/wjeZK6UVwYvVv1ZMUywVBFAQVWDlKOrnFpPPzKupBJtyWFzbyBIEIVYTk4xllpJv8HsAJgAAAABUACgAAAAAAAMWdlGpcqtNvMJ64Y6PCTz47EPsq3zqWtS0qOc+GMcv7UABdtrb2dtKTlHTGKzvyzu/qAAP/9k="},
+      {id:"p21", name:"SUPER KING WHITE CLEANER (100ML)", code:"WL", category:"Fleet, Joggers & Sneakers Cleaners", price:176, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGgABAQEAAwEAAAAAAAAAAAAAAAEFAwQGAv/EADMQAAICAgAEBAIIBwEAAAAAAAABAgMEEQUSITETIkFxBmEjMkJRUoKRsRUkQ4GhweHw/8QAGAEBAQEBAQAAAAAAAAAAAAAAAAIDAQT/xAAnEQACAgECBQMFAAAAAAAAAAAAAQIREhQhAwQTMUIiMlFSYXGhsf/aAAwDAQACEQMRAD8A92CAHC7KfIOg+gQAFGyEALsEKAQAAAAAAAAAAAAAAAoABA2l1b0UzOPNrBWm0+dfsyorKSRyTpWaHiQ/HH9R4kPxx/U8DbZZzPzy/U5MWc3JLmevc9Wl+55tTv2PeA4sR7xKW/WC/Y5tHjex6iAoOAFKDp0mjL4/NRw4J1znzT7QW2uhq6OlxC9USg239V9F3fYqDqSZE1caPHThzyf8nkv2rZy49VvN5cDKf5GjQ4hlZTivBco80e3qn7/+7H1iZeQqpOxqVm/LFrq16/ubapuWFGOnWOV/w3sCUp4VTlW65KOnF91o7B18Cbsx25LUubqvuekdnRg+56F2ITR9aBJ0oBQCGNxyS8euHPy7g/Mu669/8G0ef43VLI4goxeuWEU/mm2VFWRKWNOrMKD3ZfOy2+dEYRlXKNrTnHkm3L32u3prRKI2V10yrvnk2TSa+kk04OUvPpPfZRXyFuLHx0vK6pyUfE5F5fc7UOD311uTjUrF6RS018nrp7B8Gqtrc0XNJ3UXt+D0PA5N4soyfM4tLe979P8ARpGJ8N88VfXYuVx5eny6m2JKnRnCWSsApCSygAAHkviGV/8AGN417qsjBLsnFr13s9Yebz7eHyzblkyUbFJrcovWvu2VFTaeC3Jk4L3ujp18UmouF2Ep76yaaafz0cdWZlwulOqCqrf9J9YxPu1YGvocnH699z0fNdfDfrX5FDnv7Mt9CYvmI+K/ZElCXkzX4De783IlPSscUmkta0bpg8HswnmNYsnKcotylp9V/c3ipZeaplxwr0O0AASUTYAABl53CsLItc7KtTl1coya2ahw3URt7uSf3plRk4u0TKKkqaMGXw/ht9J2r83/AAsPh/CT6ytl+Y1XgT35cma94piOBL7WRN+ySNOvP5Muhw/pJw/h+LiNyoqUZa1zN7Z3ziqqjXHS2/dnKZttu2axioqkAASUAAAQMAAgAAKgAAUgAB//2Q=="},
+      {id:"p22", name:"SUPER KING WHITE CLEANER (50ML)", code:"WS", category:"Fleet, Joggers & Sneakers Cleaners", price:110, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGgABAQEAAwEAAAAAAAAAAAAAAAEFAwQGAv/EADMQAAICAgAEBAIIBwEAAAAAAAABAgMEEQUSITETIkFxBmEjMkJRUoKRsRUkQ4GhweHw/8QAGAEBAQEBAQAAAAAAAAAAAAAAAAIDAQT/xAAnEQACAgECBQMFAAAAAAAAAAAAAQIREhQhAwQTMUIiMlFSYXGhsf/aAAwDAQACEQMRAD8A92CAHC7KfIOg+gQAFGyEALsEKAQAAAAAAAAAAAAAAAoABA2l1b0UzOPNrBWm0+dfsyorKSRyTpWaHiQ/HH9R4kPxx/U8DbZZzPzy/U5MWc3JLmevc9Wl+55tTv2PeA4sR7xKW/WC/Y5tHjex6iAoOAFKDp0mjL4/NRw4J1znzT7QW2uhq6OlxC9USg239V9F3fYqDqSZE1caPHThzyf8nkv2rZy49VvN5cDKf5GjQ4hlZTivBco80e3qn7/+7H1iZeQqpOxqVm/LFrq16/ubapuWFGOnWOV/w3sCUp4VTlW65KOnF91o7B18Cbsx25LUubqvuekdnRg+56F2ITR9aBJ0oBQCGNxyS8euHPy7g/Mu669/8G0ef43VLI4goxeuWEU/mm2VFWRKWNOrMKD3ZfOy2+dEYRlXKNrTnHkm3L32u3prRKI2V10yrvnk2TSa+kk04OUvPpPfZRXyFuLHx0vK6pyUfE5F5fc7UOD311uTjUrF6RS018nrp7B8Gqtrc0XNJ3UXt+D0PA5N4soyfM4tLe979P8ARpGJ8N88VfXYuVx5eny6m2JKnRnCWSsApCSygAAHkviGV/8AGN417qsjBLsnFr13s9Yebz7eHyzblkyUbFJrcovWvu2VFTaeC3Jk4L3ujp18UmouF2Ep76yaaafz0cdWZlwulOqCqrf9J9YxPu1YGvocnH699z0fNdfDfrX5FDnv7Mt9CYvmI+K/ZElCXkzX4De783IlPSscUmkta0bpg8HswnmNYsnKcotylp9V/c3ipZeaplxwr0O0AASUTYAABl53CsLItc7KtTl1coya2ahw3URt7uSf3plRk4u0TKKkqaMGXw/ht9J2r83/AAsPh/CT6ytl+Y1XgT35cma94piOBL7WRN+ySNOvP5Muhw/pJw/h+LiNyoqUZa1zN7Z3ziqqjXHS2/dnKZttu2axioqkAASUAAAQMAAgAAKgAAUgAB//2Q=="},
+      {id:"p23", name:"KING INSOLE", code:"KIS", category:"Shoes Accessories", price:176, stock:0, image:"data:image/jpeg;base64,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"},
+      {id:"p24", name:"SHOE HORN IRON (IRON)", code:"KSH-S", category:"Shoes Accessories", price:202.4, stock:0, image:""},
+      {id:"p25", name:"LONG SHOE HORN (PLASTIC)", code:"KLSH-P", category:"Shoes Accessories", price:202.4, stock:0, image:""},
+      {id:"p26", name:"KING SHOE BRUSH (WOODEN)", code:"KSB", category:"Shoes Accessories", price:301.4, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCABTAHgDASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAABAUAAgMBBv/EADYQAAIBAwIFAgMGBQUBAAAAAAECAwAEERIhBRMxQVFhcRQykSIjUoGh0RUzQsHwBkNyseHx/8QAGQEAAwEBAQAAAAAAAAAAAAAAAgMEAQUA/8QAKhEAAQQBBAEDAgcAAAAAAAAAAQACAxEhBBIxQRMUImGB8DJRcZGhwdH/2gAMAwEAAhEDEQA/ANnsVimYSzIu2QRuDXZBawMG0NMOmo7Lmo75Q6IkBHcLk1k4aSEF3zg9KoPynn5QN3GJH1DAJoXQy9qaRW7XLMkIJcKWA/F6fTetbWCCKL4m4cED5UG5z61FK33Lo6eemIfh9gskRurpgsC9s/MfHpWnE5bmRkhELxxNjQmN2/zx2oy1mhnlkkWFviCcoq7KPUnz6/Ss7opbsrc1mul7ofsp6e3pS6wmNkJktw+/vtDPaW9nZFrtiZ3AKKjDYf55pJPcZ+yKNvnaUsxYmRupNK5EKmrdLp2uO9/Cn1esfGPG05PPx8BVZiTkmqk0XPwq9t4nklt2VEGWOQce4z61nb2F1dKWt7eSRQcEqNs+K6u9tYK4u0k5R/DeFfHRRSxtzTzdMsakAqPzpqf9PEQ3EcSoWlOqF2BOlR1B8Gg+DJxLhUkhbhU8olA2wR0ppJxlYmSS54VPC26qzbe4FcrUy6rfUQsfT/U+Nsde5Kr3g/wspkJ0W6IG1yHOs+ABvvQN9dpdzB0gWEBQNIp3xS7bilkEispguoHXgkbe1IBZyOcRoznwoJq3Sve5gMvKRK0A+1ZA71KOi4UWhR5rlLdnYjTKpGN8b1Kp8rUrxlP5Y21bnCnbBPr/AO0EGwzL0zRUrsRnVk0JNs4cdDXNAPa6dDpSG5ktbhZoiNadM7isXkM0zSSHJdssQK7IN6ybV1RRjtk1PMLop8BolMJLqOKIRWWpR1MjbHP+d6XySgZ0nJ81myyt8w+hqvLbuKxjY+XFG8zAVG36qhOTk7mqsoI6VpoPcV3Sc9qrE7B2ovSzHO0prOoe7mbkrKtxApYMdIxhSST4GKxkilKkDlPcYBtgwHJK+EHTPof+6yF7OsYX7raPl6iu4XGOtDx3bQRtH93JGTnQ+4B8jxUzWbjg3nhWOkcwDc0jFX2mVlJK97wh7jVzSpV9XXIdhvVeHxs1o5yJUZyjW5O7ADOV9RmhH4zOzxScm3aSH+WWzt+tBz3VzNHGkcEcOiQygxsc6sY6k0Y07y/dwg9WwRbALwB/JXpLXlpc2EUErSxhW2BwdyxwR5ocTulqsiqdBkEaxKxRE2743P8A9oEX94umUWkbXABy4JBJx1wDjNXteJXQGbi2JkI3dDoLjyR0P0r3heDbsoDPHtpuMcprIgjB51w8JDaSArvG48EPtUpZNxN5FAa2ZgNwHkJH0GKlZ4pOlomhr3WT+g/sL14hjzvEm/gCh7rhtvc4LqRpHRTjNFLIp/qH51yWWOJGd3AUDJOaEWpASvKm0ds6gUVWI3rKdFSQKoC4HTO/5+KYTzNypp9Yw5PLwNx5FJ44ioMxJGvfDdW9favSZaqIXU4LTFMLeyWMK8w1swysS75rJLmKCMchCZWG7P29qIEixwDmgQdyFP2nP9qmAVznuqgh5El4hcfIEC7dMaRQl5BFDIVilEgHfGK1nuxhlTMcZPy6s5oB5NZ36UyOHyHPCyTUmEY/ZCTtIenShjkHfrTu3sTcRq4kjUM+gBs7nb09az/hskhOQqDOAXONR9O5rpRujjFDC5crpZjbrNoK2sp7lNcYBXWEONyM98DtR/8ABZ0jkypZw+FAGzL3b2oqwsrvhtyHRYJDKNCqZdOTkfrRE3FnhTnPZ6lX7JMc4YLnzU82om3VEAQvMibVutLl4eIpWWf7MUZAeQD96wmjiEjCI6kzsSNzRvEp7m/hikFuY0VeZ/MDEg4AOOtDpZ3DAaoiv/IgH6E06ORxbb8FLczNAIKSM9v0qUzurFbeJnM2eygoRq9j0qU4SXwgLa5TGHjFysf3kAfHdatPxJbmAalCAHdChbV9KEvYWtb+SMKwBOpSDgnzWDuSCrJLvnbrUCeF2/4giSR4hd20/Z1jCqPRaWRzyS3TNKxZz5OwFbSqxi0sujB6scH6D9qHeELKpwdPc4xmtpGMFHJdCJw6SYYeBmqS3TSMWLamPdjVYyCMitY4zK4RF1MegqfDTRCuFuFg0hSxY5JzXaaG2hto2Mqc5+mB8qn1NYfAkW5lk0xr/SG6t7U0aiukn0gdkuUtJo1tnjeTQeYHUkHxg9PyogX8PxEuGIzlRIxJ1j1PUH1FJ58DZOtAMsxbcnHvRNaJDuIQvPiG1rr+i9NHNaxNa8u7iKpOXYM+6g479+hof4q3tlBMiF5JWGuNg+FwMah3B8UgiguJi4i1NpGSM749qN/gt6quepXGkD+rz9O9a6OMOtxQtmk27WhOopUDyyiSKBPhxEjI+QOmMd/2q1umChEpWMRkMsbfM/4sjrXnns5reUi4flRqdJkxkE47eapFKjsQ2Dvscda1sI/ECsdqHOG0heivrlUtrpCkaq0ez9GdsjG2T9alInESLk4FSnRjYKSJXGQ2vb8Wt+e4kOlfQjNLzaQE9P1opuICRTmNfqaGLBj1Ue+f2pYY4JImb+ap8LCgJjVAxHXFCy8NmuJQ3MQ/nTBEDH+ZEB6sf2o6EQxjZ4ifPMFYdwRiUHtIpuEXEKI7soycEA9verCOcYjhjiEQI1amyW9z+1Nb+USw6F0k5yPvF/elpEoGAB+TClmJxzSa3UhoolS45hTCork9tWFT2Hel9wl/Kckaz3JYUcRJ+A1XDj/bb6VrYSDdLx1gqgQl0FjdyzBJF5anOWwD296u/CrnUuggoVyWZcEb9Mb5NHo7pIG5bbHxXXuGAASJj5yKYQ/oJbZI6yUDBwqa1kW5SZdan5TESd89s0bPLfqzhFglkjzty2XPnBzg1RpyVbMUmTjfFda7zq0xSfabO4pT4i824WmCaMDBQl9Z3fE4keQxh0jD6AhUANjue4oe34C5ZWdjy++hWz+WRTQXAw2Q+SAN+1WW4QEklsnHntRN3NFDheL4ykfErHkpGY1lcNnJxkfp/epTee4LoFVm65zUpzXGshLc5t4W4G1QVKlOUS706V3Jx1qVKEryzfrWZJ33qVKMICqknzVdR23qVKMJZUDtj5jXeY34jUqV5ZShkf8AEauJHx8x+tSpWrO1rFPKhBV2B96q0sjEkuSalSh7W9KpdiOtSpUrUBX/2Q=="},
+      {id:"p27", name:"SUPER KING SHOE BRUSH (WOODEN)", code:"SKSB", category:"Shoes Accessories", price:340, stock:0, image:""},
+      {id:"p28", name:"KING TOILET CLEANER EXTRA (1275ML)", code:"KTE", category:"Toilet Cleaner", price:320.83, stock:0, image:""},
+      {id:"p29", name:"KING TOILET CLEANER FAMILY (1000ML)", code:"KTF", category:"Toilet Cleaner", price:185.35, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4ACMDASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAAAAQCAwUGAf/EADMQAAIBAwIDBQYFBQAAAAAAAAECAwAEERIhEzFBBSJRYXEGFDKBgpEWcrHB0RVCUqHh/8QAGAEAAwEBAAAAAAAAAAAAAAAAAQIDBAD/xAAiEQACAgICAgIDAAAAAAAAAAAAAQIRAxIhUQQUE2EiMUH/2gAMAwEAAhEDEQA/AD3O962VwPoNeG3uV5204+g02fbW6XZrKPJ5d81avtnLpGqyXI+LEh/itXtz6JfBEzNEo5wyj6DXhJ6o4+mtL8Ys1wrtA4RQRw1cbnz2plfbO2bZrObP5lrvcn0K/Hj2Ymryb7UVvfi6x62c32X+aKPuS6B667OIkEpwCG7vLaoZllcGTUcDc8tq6NpezCCeDMAeuFIFSX+jGP4JSzcm4YwPlWHf6Nmn2c/Ep4mMgjoautpERyjJnVy8jW3FH2Mx0yGRTj4gmAfQc6hc2/Y6BRHPuf8AJWUD51zmmcotMR0s26uoHgQKKs93szvrjHrOaKGyG1ZUCEULgnO3KpHA2BxSNzJK1urxMQWxnFJEz9S5Pjk0pSGKUlaRt6SSDnfNSZFZdJ8aU7Okd4mEhJKnbPhTUgJIO+B4VwrTTpkhFtsBiigyBdu9tRQOMyCQsojAzpGSR09am+cc9vWul7GtLa2ttPdaR93J6+XpTrWdpz93iz+UUzx2bcXlrFcaOLhM0ZZ44y6cmrQhl4i6lU46+Va920KrpXT5AVii3Z5yikhG+LHhRUa4IZLytzSIPcjUe658wtFdLBbWqQIqxoAB1oo6Etmiq1lWNBlFJphrlGUgwj1zSMe2QehqfWrHSXIpdgli4AFQ7OAa5cN4CmHTUpFVWUZS9JO3d/ekf7Lxf4s1cQDbf7UVUedFMZ6FlcqsbDOHRWJ6DNWcYjlp+wpnsVlNvFqxndN+uD/2mLy0DSKIxChY4ww64zjA3zU9mlwXko7UzKeUFjjcnoBS8TSw9oRl0IEmUx1+daNstrE8cscpuZXViqAaMMBkDTz3pLtGdY7mDTIz6Z42Go4PnhcDAzgUNm+SlVwh/IPKinZ4bXjNr4IbOSC4H+s0U9kKRkWNwUtgwwvBlBPmDnb9qalu4IYpY+M03EbV3V7wxjSQ3iMAY35Vk8VYOLDPqAcBDjo2RTRjYiICLi4OvSxwHTJyPSpp2aM2sHb/AKym67Y04VQkQDll0jU6k88H+35VmXwZDFIyODJ39T8z/PrXQz2XZ7X9vdZa0haLiKFGDq226786z/aK1aScXWvKm3XBbmTnw9K6yUMkpPWKqzVjeylQSM0xLbnCZ/aiqbKBjaRFYSwK5zk9aKooNqycs0U2uTMe2ydch8961zDcNaQCHhyIoyurZgPCiisXmTeJLUq8jfL5JrHcspOhEyukqAMD9f0qi5swkYklOphsg6D08T50UVgjmlkmoPhPoEZVyhrs6K4jsIUFwVCrjGnOKKKKeeSak0mDY//Z"},
+      {id:"p30", name:"KING TOILET CLEANER LARGE (600ML)", code:"KTL", category:"Toilet Cleaner", price:154, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4ACMDASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAAAAQCAwUGAf/EADMQAAIBAwIDBQYFBQAAAAAAAAECAwAEERIhEzFBBSJRYXEGFDKBgpEWcrHB0RVCUqHh/8QAGAEAAwEBAAAAAAAAAAAAAAAAAQIDBAD/xAAiEQACAgICAgIDAAAAAAAAAAAAAQIRAxIhUQQUE2EiMUH/2gAMAwEAAhEDEQA/AD3O962VwPoNeG3uV5204+g02fbW6XZrKPJ5d81avtnLpGqyXI+LEh/itXtz6JfBEzNEo5wyj6DXhJ6o4+mtL8Ys1wrtA4RQRw1cbnz2plfbO2bZrObP5lrvcn0K/Hj2Ymryb7UVvfi6x62c32X+aKPuS6B667OIkEpwCG7vLaoZllcGTUcDc8tq6NpezCCeDMAeuFIFSX+jGP4JSzcm4YwPlWHf6Nmn2c/Ep4mMgjoautpERyjJnVy8jW3FH2Mx0yGRTj4gmAfQc6hc2/Y6BRHPuf8AJWUD51zmmcotMR0s26uoHgQKKs93szvrjHrOaKGyG1ZUCEULgnO3KpHA2BxSNzJK1urxMQWxnFJEz9S5Pjk0pSGKUlaRt6SSDnfNSZFZdJ8aU7Okd4mEhJKnbPhTUgJIO+B4VwrTTpkhFtsBiigyBdu9tRQOMyCQsojAzpGSR09am+cc9vWul7GtLa2ttPdaR93J6+XpTrWdpz93iz+UUzx2bcXlrFcaOLhM0ZZ44y6cmrQhl4i6lU46+Va920KrpXT5AVii3Z5yikhG+LHhRUa4IZLytzSIPcjUe658wtFdLBbWqQIqxoAB1oo6Etmiq1lWNBlFJphrlGUgwj1zSMe2QehqfWrHSXIpdgli4AFQ7OAa5cN4CmHTUpFVWUZS9JO3d/ekf7Lxf4s1cQDbf7UVUedFMZ6FlcqsbDOHRWJ6DNWcYjlp+wpnsVlNvFqxndN+uD/2mLy0DSKIxChY4ww64zjA3zU9mlwXko7UzKeUFjjcnoBS8TSw9oRl0IEmUx1+daNstrE8cscpuZXViqAaMMBkDTz3pLtGdY7mDTIz6Z42Go4PnhcDAzgUNm+SlVwh/IPKinZ4bXjNr4IbOSC4H+s0U9kKRkWNwUtgwwvBlBPmDnb9qalu4IYpY+M03EbV3V7wxjSQ3iMAY35Vk8VYOLDPqAcBDjo2RTRjYiICLi4OvSxwHTJyPSpp2aM2sHb/AKym67Y04VQkQDll0jU6k88H+35VmXwZDFIyODJ39T8z/PrXQz2XZ7X9vdZa0haLiKFGDq226786z/aK1aScXWvKm3XBbmTnw9K6yUMkpPWKqzVjeylQSM0xLbnCZ/aiqbKBjaRFYSwK5zk9aKooNqycs0U2uTMe2ydch8961zDcNaQCHhyIoyurZgPCiisXmTeJLUq8jfL5JrHcspOhEyukqAMD9f0qi5swkYklOphsg6D08T50UVgjmlkmoPhPoEZVyhrs6K4jsIUFwVCrjGnOKKKKeeSak0mDY//Z"},
+      {id:"p31", name:"KING TOILET CLEANER MINI (350ML)", code:"KTMini", category:"Toilet Cleaner", price:87, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4ACMDASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAAAAQCAwUGAf/EADMQAAIBAwIDBQYFBQAAAAAAAAECAwAEERIhEzFBBSJRYXEGFDKBgpEWcrHB0RVCUqHh/8QAGAEAAwEBAAAAAAAAAAAAAAAAAQIDBAD/xAAiEQACAgICAgIDAAAAAAAAAAAAAQIRAxIhUQQUE2EiMUH/2gAMAwEAAhEDEQA/AD3O962VwPoNeG3uV5204+g02fbW6XZrKPJ5d81avtnLpGqyXI+LEh/itXtz6JfBEzNEo5wyj6DXhJ6o4+mtL8Ys1wrtA4RQRw1cbnz2plfbO2bZrObP5lrvcn0K/Hj2Ymryb7UVvfi6x62c32X+aKPuS6B667OIkEpwCG7vLaoZllcGTUcDc8tq6NpezCCeDMAeuFIFSX+jGP4JSzcm4YwPlWHf6Nmn2c/Ep4mMgjoautpERyjJnVy8jW3FH2Mx0yGRTj4gmAfQc6hc2/Y6BRHPuf8AJWUD51zmmcotMR0s26uoHgQKKs93szvrjHrOaKGyG1ZUCEULgnO3KpHA2BxSNzJK1urxMQWxnFJEz9S5Pjk0pSGKUlaRt6SSDnfNSZFZdJ8aU7Okd4mEhJKnbPhTUgJIO+B4VwrTTpkhFtsBiigyBdu9tRQOMyCQsojAzpGSR09am+cc9vWul7GtLa2ttPdaR93J6+XpTrWdpz93iz+UUzx2bcXlrFcaOLhM0ZZ44y6cmrQhl4i6lU46+Va920KrpXT5AVii3Z5yikhG+LHhRUa4IZLytzSIPcjUe658wtFdLBbWqQIqxoAB1oo6Etmiq1lWNBlFJphrlGUgwj1zSMe2QehqfWrHSXIpdgli4AFQ7OAa5cN4CmHTUpFVWUZS9JO3d/ekf7Lxf4s1cQDbf7UVUedFMZ6FlcqsbDOHRWJ6DNWcYjlp+wpnsVlNvFqxndN+uD/2mLy0DSKIxChY4ww64zjA3zU9mlwXko7UzKeUFjjcnoBS8TSw9oRl0IEmUx1+daNstrE8cscpuZXViqAaMMBkDTz3pLtGdY7mDTIz6Z42Go4PnhcDAzgUNm+SlVwh/IPKinZ4bXjNr4IbOSC4H+s0U9kKRkWNwUtgwwvBlBPmDnb9qalu4IYpY+M03EbV3V7wxjSQ3iMAY35Vk8VYOLDPqAcBDjo2RTRjYiICLi4OvSxwHTJyPSpp2aM2sHb/AKym67Y04VQkQDll0jU6k88H+35VmXwZDFIyODJ39T8z/PrXQz2XZ7X9vdZa0haLiKFGDq226786z/aK1aScXWvKm3XBbmTnw9K6yUMkpPWKqzVjeylQSM0xLbnCZ/aiqbKBjaRFYSwK5zk9aKooNqycs0U2uTMe2ydch8961zDcNaQCHhyIoyurZgPCiisXmTeJLUq8jfL5JrHcspOhEyukqAMD9f0qi5swkYklOphsg6D08T50UVgjmlkmoPhPoEZVyhrs6K4jsIUFwVCrjGnOKKKKeeSak0mDY//Z"},
+      {id:"p32", name:"KING BLEACH EXTRA (1275ML)", code:"KBE", category:"Bleach", price:350, stock:0, image:""},
+      {id:"p33", name:"KING BLEACH LARGE (600ML)", code:"KBL", category:"Bleach", price:156.93, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGgAAAwEBAQEAAAAAAAAAAAAAAAECBQQGA//EAC4QAAICAQIFAwMCBwAAAAAAAAABAgMRBCEFEhMxQQZRYSIygXGRFiNigsHR8P/EABgBAQEBAQEAAAAAAAAAAAAAAAACAwEE/8QAIREBAQACAgICAwEAAAAAAAAAAAECEQMSEyExUTIzcaH/2gAMAwEAAhEDEQA/APRJDwPA0UFgeBgAsDwMAFgWCgAnAsFBgBDAAAYDAQzA4j6hs0mtv09dFculhc0pPc6uD8XnxG+yqdcIckFJOLe+e5teHOY99ekTOW6aoABisgGACAEMAGlnZAOK5mkBn3+m9FqtRbfc7XK5pyxPCWPbY6NJwTTaK13adzTcFDEpZWEd0aeaKbkW6tu723LvJnZ136TMZvbmaw8MRT7sRCiAYgJGAAMqv7s+yJKh5A64bQRXf8o+cZLHZ/sUpdtnt8HByzWJsku77+zIOgAAAgZIwGY/G5WRvqcbra61D6uSbi3v4x5Ng8z6sttr1GkVSbcoyyvytzTjm8k5fDP0b1+rsmnr9VGMHlLqS3WdiNctfpZ8i1mpsTWc88jq0176LjGSjs3lptrwtn8juvVkZdWLbxnljnG72/7wazkynJvXr60q8EuGtzf9d3pC22zTarrWTnJWL7221t8noTzno9ONWsjKLjLnjlN58HojPm/ZU4fiYCAyUgZGR5As876pj/O0MouCk5Shmc+WKyvLN/JkeoE5V0pQjPMmnzLKQ7dfa8MbllJLpk0ae9T6sXpMye+LW/8AASovqgnK7RLlz91j8jlpaXDLpqU5e0FiJ9o6eiMW41Uqazj6Fhnn8mW/n/Hs8Wevl2el0unrHmub62Oet5i8JdjdMngTfStUlHaWFy9sGpk9Hbt7eLPHrlZbtWQyRkMhL5plLBXR+Q6D9zgEjk4jwqrilcK7bLIKDyuTHf8AJ1dGfhlwhZB5xzfCZUtl3HLNsL+D6/GvtX9i/wBlw9HUL79bdL9IpHoFP+mX7DVuW107NveODTzZ/afHj9M7RcKo4XU66JWSU3l878/odDaPtbCVjT7Y+SFR7syttu6uTT55Qj6urBSrRwXgMAABgAAAyAAAdx4AAAMAAH//2Q=="},
+      {id:"p34", name:"KING BLEACH MINI (350ML)", code:"KBMini", category:"Bleach", price:90, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAMFAQQGAgf/xAAzEAACAgECBAQDBQkAAAAAAAAAAQIDERIhBAUxUQYyQXETFCIzYYGRsWJyk6HB0dLw8f/EABgBAQEBAQEAAAAAAAAAAAAAAAABAwIE/8QAJREBAQACAQMDBAMAAAAAAAAAAAECEQMSITEEEzJBQlGhkbHB/9oADAMBAAIRAxEAPwDvwAAAAAAAAeLb6qUnbZCtP1lJL9SJcw4N9OLoftZH+5dUbAMRlGcVKLTT6NMyQAAAAAAAAAAAAAAA8zlog5YzhZA4jxrfG3mlNdb1Sphiax5W3kpOXxni+KjnXDGEj6BZp4mxTtj06LsS101LpGK/A9fH6iYY9OnFw3dtTwldGfJKalLM6cwksdC6IamoYilsTHmzvVla6naAAOVAAAAAAAAAAAAMN4Tb9AK+xL5icY9EyVVrUiCt6pSk/V5NpedewElUUpPuSkMHifuTAAAAAAAAAAAAAAAi4qWmiX37EpU+JofE5JdFScW3HddepZN3SXslqi1HobCy5J4Z88muJqnKDts29YzeDFXzixqtu37zZ6Z6eX7md5LPo+jN4eexOfOJQv8Ama8ubSkstt46n0aPlXsZ8vF7eu64Z9bIAMWgAAAAAAAAAABWeIrFVye6b2Sxv23LMqfE61civXfH6nWPmbSuW4dxk5T1V77p5e3v/wALKu2jfVNtx3lHD7Z9fuKquDoilBOSw9mk9P3/AO9zYi5QuSUVJrGHjbGPqX44f8i8lxzymV128eW+HF0zWr+nrjVHXSmow+v6cwl3752Z28fKvY4W6GqVc5OTnHGXnZ7+p3UPJH2O+TLqxjDo6MqyADFQAAAAAAAAAACr8SQlZyW+EVmTwl+ZaFZ4ilp5Pa3LTut/xEtneLJLdVxlcaIpqfBXLvpnn+pNU+Fxp+V4hp92/wDIxTxNEI736pftZWDZo4nh4PKug87tZM7OTfi/zXo9vi18p+kcqYznFVcJKElJP4kp9F67HdQ8kfZHEWcTU5R03yxnyrLSO3r+zj7I0lz1rKf3/rLkx48fhdvQADMAAAAAAAAAAA1uMhG+idc4KUX1TWUzZI5w1ICglyPl03vw+P3ZNHuvw/y5PPwp/wARln8tp8rl+Z6VUkd+5n+U6Z+GpTyngKpKUOGhqXRyzL9S1XQihW08smRzbb5JNAAIoAAAAAAAAAAAAAAAAAAAAAAAAAAP/9k="},
+      {id:"p35", name:"KING COLOUR CLOTH BLEACH (500ML)", code:"KBL-C", category:"Bleach", price:460, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAAAAECBQYEA//EADIQAAICAQMCBAMFCQAAAAAAAAABAgMRBBIhBTEGE0FRFCKBFSMyYnFSYZGhsbLB0eH/xAAZAQEAAwEBAAAAAAAAAAAAAAAAAgMEAQX/xAAlEQACAgEEAAYDAAAAAAAAAAAAAQIDERIhMTIEEyJBUWFx4fD/2gAMAwEAAhEDEQA/AN4AAdAAAAAIkIAADAAAAAAIYDAAAEAQsuqpx5tkIZ/akkRr1WntaVd9U2+yjNMzfiyq63V0+XXKeKn2WfUrujafUQ6hpJTpnGKtXdFTsalg1RprcNTnv8G6ABlplEAAAAxIYAHjqnYtNN1fjS4wexGclGEpPsk2Dj4MvbrJTinh7s4bfPJHS6tzm1JN4OiyqtrmK7p/UhpaofetRWUuDP7nkvVqLjpNlltEpTbcM4jk7zl6e18KlFYUW/8AZ1F64PTr6IBMYmdLAQxIYAHNr57NJP8AN8v8TpKzr2phpdFCye7HmJcLJx8ELHiDZX2P+4jo395Ne5W2dXol+Gc+OceWFXV6oyzmf0rKTys+rJpulT4nD92SxM/0HXV6rW2Qgp5jDc9yx6mgLY8HpUPMEAhiZIuAYhgAU3ijZ9nVuyO6Cujle/DLkqfEkVLp8E1n72PHv3Iy6shZ1Zk6vKrnZPyd1csbYyePVc/1PaF1EIQUqcuMNvmcJ7srnHZ+/wCpKVeMLCWHzweS2qzyZtb8Zax3RijZN8IuhJwrai91v7/2C18NTjZ1i+cU0nT6928rk1RlfDCx1W7CwvK4X1RqTbDqZqZOUW38sYmMRIuABDAA4urJfDxz6Tz/ACZ2ld1uaho4OT2xlYot+2U1krtWa2vo6mk02Uet09u1W1UTtjB7pRh3kkvT3K+6i5zps1NEljLcsYw2+EzSxuvhXGHwkpLHDUkeN9tlilCWmcMp95rle5R4WyumGnfP4NSulGecHj4fnv6rN4SXktJL05NIZPwxtXV7o1z3xVbxL3WUaw15zuYYWeZmf2AAIExBkkGACO45OqJT0ck1lZWUzswiFtMbK5QlnDWGHuiM1mLRnJai6HEbZr9GRV1lkk5zlJrjLZZWdF3P5NQ8fmhn/JGPRJJ86lfSv/pVpkYHVdn9kekQjDU/JFRSi+EsFzuObSaKGmy1OUpPu2dSiWRWEbKYOEcMWQySwGDpaAAAAAAACAAAAYAAAAAB/9k="},
+      {id:"p36", name:"KING HI-POWER TOILET CLEANER GEL LARGE (750ML)", code:"KHPL-G", category:"Toilet Bowl Cleaner Gel", price:455, stock:0, image:""},
+      {id:"p37", name:"KING HI-POWER TOILET CLEANER GEL MEDIUM (500ML)", code:"KHPM-G", category:"Toilet Bowl Cleaner Gel", price:338.33, stock:0, image:""},
+      {id:"p38", name:"KING HI-POWER TOILET CLEANER GEL SMALL (200ML)", code:"KHPS-G", category:"Toilet Bowl Cleaner Gel", price:176, stock:0, image:""},
+      {id:"p39", name:"KING HI-POWER TOILET CLEANER GEL BLACK MEDIUM (450ML)", code:"KHPM-G-BK", category:"Toilet Bowl Cleaner Gel", price:364.83, stock:0, image:""},
+      {id:"p40", name:"KING HI-POWER TOILET CLEANER GEL GREEN MEDIUM (500ML)", code:"KHPM-G-G", category:"Toilet Bowl Cleaner Gel", price:338.33, stock:0, image:""},
+      {id:"p41", name:"VIKING BLUE LIQUID (300ML)", code:"NF", category:"Blue", price:115, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAQGAwUHAgH/xAA3EAACAQMCAwQHBQkAAAAAAAAAAQIDBBEFIRIxQQYTMnEUIjVRYZHBUnOBsfAVIyRikqGi0fH/xAAZAQEAAwEBAAAAAAAAAAAAAAAAAQIDBAX/xAAmEQEBAAIBBAEDBQEAAAAAAAAAAQIRAwQSEyExIqHRMkFDUXHw/9oADAMBAAIRAxEAPwC/gAAAAAAAA0XbK5q22iqdGpOEnVjFuEmnjfqUmWp3rpr+KrZT2aqPJTLPtro4unvJN7dTBruz9WpX0OzqVZynOVJNyk8tmxLsLNXQAAgAAAAAAAAAAAAAUzt7qVKVKnp1Kp++jNTnHh2xjbf3lVq2tzGwhXaSg3jO3+z3r116Vrt5Vzs6jS8lt9CbdVIPs9SgpLiUstHoYcWExm5vankynxVr7F6lRudJp2iqcVe3jiceHGFnbHvLEc07D3Pc9oY087VoSh9fodLOTmwmGdkWl3NgAMkgAAAAAAAAAAGC/rej2FxW+xTlJfIzmt7RR4tBvYptN03yJnujk3E5VG2222b64q03ocIJS4l14H+ZqVp9yt3T/wAkZanf9z3UmsLoepZdRhLL8Mek13bava1Ytrhqxf8Ac7EcYpW9SVeCS6rk+R2WksU4LOcJHH1M9ytMXoAHMuAAAAAAAAAAAQNcx+x7rP2PqTyDrfse6z9gtj+qIvwqNOMO7Tks7Ee90qo4Sqpxi4rMlnkv1kzUO8nSku7k8Z6rp+J4q0dQuVKEbivw8OXDPRpvln3J7HTy9VLZ48tf36v4ZdN0vJhvvn3jUWM8XEds5aOrQ8EfJHMYWEqMqdZ1Els4p4Tly5LO/NHToeCPkinPy4cmu1r48sMr3PQAOdIAAAAAAAAAABA13bRrtvpTZPIGvexLz7tkz5FKs9SUHGUeBtU1Dxdd9915fIzRu5uM2ku9qRXFUU1vJJrix+Kfma3TbWdZqMIuUm9kjfq0ube3UJ0eGnvmXF1f6R0ZdJhjr6r9k3rL7+mff8tdc3aqSXFSjGWOGPDLKWcZ2x71le7J0CHgj5FCveL1aailFyj1zy/4X6HhXkZ8nF41Mefyzb6ADJYAAAAAAAAAAAga77Fu/u2TyFrMlDSriT5KOX8yZ8iBpFmrTT6VJRXHjMnjq+ZMqqEaUpVUnBLLTRHs722uI8VKvCWfjh/IxapcJcNJP4y+hvjjlnn7Zcmcww21F5QksVJRain1LnHwryKhdV6XDmPT+VLBb4+FeRbqbbrbLppJLp9AByuoAAAAAAAAAAAhazTdXSbmmpKLlBrL6E01+vSnHRbuVNNyUNseY9/sKda6dcU0pKvbYzj1lInuzuJQTneU4xa2VKk2382V+nrVxGfrV6mVtyTM09Yco+tXqvp1J8XW5fySf9/iMpwb32tndW1vbwzOpOdbHqus/j0ivzLxHwryOVRulWrxjTUpSclj4nVYZ4I554F4bxTWWXdaSy/E0+gAhIAAAAAAAAAAAaygAIVfSNPuHmrZ0Jt9XTRhXZ3SE8+gUP6QCd0SbfTrO1eaFrRpv3xgkyUAQAAAAAAAAP/Z"},
+      {id:"p42", name:"VIKING BLUE LIQUID (150ML)", code:"NL", category:"Blue", price:73.75, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGwABAAMBAQEBAAAAAAAAAAAAAAEFBgIEBwP/xAAzEAACAQMDAgIJAQkAAAAAAAAAAQIDBBEFEiEGMSJBExRRYXFygZGx0SQlMjM1UqGi4f/EABkBAQEBAQEBAAAAAAAAAAAAAAACAQMEBf/EACIRAAICAgEFAAMAAAAAAAAAAAABAhEDIRIEFDEyUSJBkf/aAAwDAQACEQMRAD8A3RJAyaCQQMgEggAEggAE5BGRkAgEEgAkgZwgASeSepWNN4neUI/Gojule2taSjSuaU2+yjNNi0Vxl8P3AAJABAAAAAOKv8mfyv8AB2fnWaVGo3NQW1+KXZe8GnzDUX4p7e3GCx6dTnqNCMZODcliUcZXBW3dK5nKo4UfSQTw5Fj09GvR1W3dwo0I5Usvtj/pXazW7PU+sg1xpn0MEEknkAAAAAABQ9XXMqGmwjHtUn4vgi+Mx1rKSt7ZLtmT/B1wq5omfqzIVdSq5lseE/I7p6hObxLnKweOrOTk2/ufpRqSzwfT0eW2fTNEryudJt6k+ZbcN/B4PeU/S0nLRoZ8pySLg+VNVJnrXgAAg0nAwdYGADnBm+sqUp0LZxlzmSx9jTYM91ipeq2ygsydRpfY64WlNWRk5OL4+T59cJQb3yx9CbdxcopSfPuLClaKVxKd3Rk6bXh2vPP6ES06Ur39kpONPatsZd0eruYc+N6+kLp8nC2tm56Xht0aGW3mcnz5FvgrOmV+5qa81KSf3LXB48j/ADZ0hfFWc4GDrAwQUdAEmAgz3WGfVrVxTbVbhLv2NEeK+pKrcWrlhqnKU0va0uPyVGr2N/oyVand+p1JztttGfMsvDSxjHtXtOPTVqji50VJTacfp2Xw/U02oV6VlbVLip4sLCT82+yMsnTlQi51FHcv78bfgtx1x4YyVnPJ1U4ySVGq6bi46TFPh+knlezktcFX05/SYYzhTl37lqcp+zLW0QCSCTQAAAVmuVYUaNKpOpKliTxNSawWXJUdSWVxfWChbpynGW7Yn/Eao8tXQutlLdXdldwSurt1Ix8UYurjn6I89O+0u0xKhRjOonw4xb/2kVFbSdRjN7tPu18sG/wTQ0fUpyW3Trp/NHav84L7KD9sja+Xoh5ndqC/hu+mpbtIhLnmcny8+ftLUq+n7OtZabGlXzvbbcc52+4syZVeil4JABJoAAAIYABGBgA0EokAwAAAH//Z"},
+      {id:"p43", name:"VIKING BLUE LIQUID (75ML)", code:"NS", category:"Blue", price:52.5, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAEGAwQFAgf/xAAuEAABBAECBAQGAgMAAAAAAAABAAIDEQQSIQUGMUETUWGRFCIjMnGhUoEVYrH/xAAZAQACAwEAAAAAAAAAAAAAAAAAAgEDBAX/xAAjEQADAAICAgAHAAAAAAAAAAAAAQIDESExBBIFFCJhgaGx/9oADAMBAAIRAxEAPwC+IiKQCIsGbI6LCnew05rCQfIoBcmZF85zON8Q8Whlziv911eXOKZuRmwxzZD3tc6iHG0itN6L3gaW9lyRQpTlAREQBCIiAC1OLTMg4ZkPkutBGwvqttcPmXPkx2R48RA8UHXt1b5Jon2eiG9clByp4nSX4rR6brrctZcEfEcf6mr5+jWkrm5botWn4eE130b+63OHZHgPEkDI4pGbtcxtUtL8WNbSF+at8Nn0pFq8NyvjMCKYm3OHzflbSytaehgiIoJCIiAIVM5nnLuLOFOpjQ0UFdO6+d8Zypm8SyCHEOLyLWjx1uirK9I485c55cGuq/4lZsR7muNsf0/iVgdkzHYudRN9e6ywZU7aOo7D+1v5M3HZeeUpS7CljN0xwIv1XfVR5QlkdmSB105m9q3Lm5lq2a4e5CIoVQ5KIiAIXz3meV/+VyBdAPoUvoaoXMkLH8YyGusb3drT4y3ZRnr1nZWXSPv7j7leo5H39x917yIRETQLv7WKB7TIG6D7ra9J6ZSt0tou3JcjzNM0kkFl/tW1VbkyMB0z9NHSAN1aVz861bNGJ7naChSipLSaSlNJSAIpUfmXGkl4vkGOtq6+oV5pVTi8rYeOyAtLy4CmjqTW3sQE8VU7c9gpmnq+iu4TTAJBl43ik7trsO/UfhY5cGTJ4k50MIiBqo99v133K6c+S4QxwSwyNIaLcRTi4EEd9xsdvW+y9nPbLJK18LhrAaDYsNrp7mx+SlVZPd2ly/sy5xiU+u/2jq8pQvgfkxP6tAtWWlX+WyHZ2UWtLG6W/LVUrEmyU6e67M8zM8T0eaSl6pRSQYlFKKAIWi/GZ8TNMWNMjiKJG4AHb9rfXJzuKwYWWYsgPaDRDw2wmRDNTjcUAxWvm3kDwIvQ2L28qXGlE1mTZ0gBr6ZHl5n0WPjfExmZv0Trij2ZQJvzK8Y7c/J+zE9Q50IaB7rWnjxwndL8sw373b9Uzu8r6zkZBk06nNBOk2FY1XeWYTj5ORE5zXOa0atPQHyViWbJSp7no2QmlphERVjhFCKQJVe45xNmHllkjZN2ii2iFYFUOasDMflGeKN80Th0a2y327KVijL9N9EO3HKMJ5hx2NIb458jpAr9rXfzDq1NihJvvK+/0FwZWFriHhzT5OYQphhe99RMkkPk2Mn/AInn4b465f8ASt+XkZd+VsiXKyJpZn6nFoHl/Ssiq3K3DsuGUz5LHxtAOhrhVk96VoUZJma1PQ8ttbZKKEVYxKIikAvJCIgBSIiCAApREEkoiKAP/9k="},
+      {id:"p44", name:"VIKING INSECT POWDER (130GM)", code:"VKIP", category:"Insect Powder", price:117.7, stock:0, image:"data:image/jpeg;base64,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"},
+      {id:"p45", name:"PANTHER INSECT POWDER (130GM)", code:"PIP", category:"Insect Powder", price:108.9, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAMEBQYHAgH/xAA5EAACAQMCAwQIAwcFAAAAAAAAAQIDBBEFEiExsSJhcXIGEzM0NUFRcxRTgRYjMlKRocGS0eHw8f/EABkBAQADAQEAAAAAAAAAAAAAAAABAwQCBf/EACYRAQEAAgEEAQIHAAAAAAAAAAABAhEDBBIhMXEUMhUiUVJhgaH/2gAMAwEAAhEDEQA/AN/AAAAAACK5uaNpRda4qRp01zlLkBKDEv0l0lPhdp+EJf7D9pdLxn8Q/wDQyO6Ou3L9GWBiY+k2kvndqPjCS/wZOlVhWpRq0pKcJLMZLk0JZUWWe3sAEoAAAAAAAAAAAMdr1rC70urCpPbGOJN+BkSlrKctJuorm6bRFm4nH3Go09P0mK7d3HPdIm/B6O1hXK/r/wAGGUHTaTaeVlP6linbTqUnOMo4XNMwfT8luu67eveLhmEzuXisjU0SzlBunNtZw+PzNt0+hG2saNKLbUYJLJpFncb0qTlhx4p/X6eJvlH2MPKjvppnLZldsHUY3C9tewAbWYAAAAAAAAAAAqat8MuOOOwy2UtZWdIu8/lS6BOM3ZGn05OfDe4vGN7axzWX1PUlJ004Vmp4WVuWcpNv+7x+pjbRQm4QcE5OSzLPy+hPcW8YpzpNSp5a8pz9Zq60v/D+O53C52JrirKFPdnHb/gTWFx4f5N8oewp4/lXQ5hKT3rs9ncuODp9v7vS8i6Du78tp5uCcOMxl37SAA6ZgAAAAAAAAAACnq/wm7+1LoXCpq3wq6+1LoRXWP3RzunKbp7d7x38S5Sv50oKLoQltWE08Z8TGwqSjwVKUu9EirNv2U8fUyZYTL3HvZcXFl/C3culOjGrGG2UqmEsYOhW/u9LyLocyVao3GG2cU2spvgdNt/d6fkXQt4ZrceX1WNx1N+EgAL2MAAAAAAAAAAAqarx0u6+1LoWyrqnwy5+3LoRfTrH7o57bWP4iEqj3RhjDlHj/bwJ1pEJLGamOafq3xyV6dKc4KUJqK5NNNkioV/zY5XLsszd0j3cp5vn/HmrYRt3TqU1KUcrtNYxxwdHoewp+VdDnLozjKLnNS4rhtaOjUPYU/Kuhbx3e3n9Z4mP9pAAWsAAAAAAAAAAABV1Pjptyl+Wy0VdU46ZcpfOm0TPY59DdbzxNc14pol9fS+W79Uj49QtJbqMnNR3vc3DOOfL9T1Tp2slCDrQc1JuW1vLjjPDvO5w9PnfPitV6rqJN6lfHGpV21YQexSxnGP/AE6Fb+70vIuhoVOu6ipx2ZnCMop88R7u832393p+RdBnxY8f5ZFGfNly6uSQAFbgAAAAAAAAAAAq6px025XL92y0V7+jK4sqtGOMzjhZHoc/uLGmoxr1VKM5SzhdlvvwWqNpb2FeEqi9ZVqxxRdKblLLLdT0fvtzbhGXfuPVPSNRpLFOG14xlPjjxLLyYa3J5+F84b++a+VayputKpXliMqScd0OGW/m/wDvE3W2ebel5F0NVoej99nGIwi+fa5m2UYerpQg+cYpDk5JnfCq8cw8bl+HsAFbkAAAAAAAAAAAAAMDAADAAAAAAAAAAA//2Q=="},
+      {id:"p46", name:"VIKING MOSQUITO REPELLENT LOTION (50ML)", code:"VKMR", category:"Mosquito Repellent", price:160, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGgABAAIDAQAAAAAAAAAAAAAAAAQFAQIDBv/EADgQAAICAQEEBQgJBQAAAAAAAAABAgMRBAUSITETQVGRsRQVIjVicYGhJDIzQlJhgpLBNENTcuH/xAAaAQEAAwEBAQAAAAAAAAAAAAAAAgMEBQEG/8QAJhEBAAICAQMDBAMAAAAAAAAAAAECAxEEEiExBRMyIjNBgSNhwf/aAAwDAQACEQMRAD8A9+AAAAAAADIOVuoppaVlkYt9TfE5+Xad/wBz5MrtlpWdTMPdSkA0qvqtz0c1LHYbk4mLRuHgAD0AAAAAAAAAAAAAHnNqZW17eP3Y47jWLeDG0W3ti/PVur5GY8j5rlz/ADWa6fGEjZjfnGCfWn4F8UGzvWVful4F+db0/wCz+1GX5MAA3qwAAAAAAAAAAADhqdTGjEec3yQFBtD1vqP0+CMx5E22EL7ummvTxjgbKMV1HNy+nxkvNuryujLqNaR9nesq/dLwL4rKd2mzpIxW9jHEnU3K1PHBrmjXx8Hs06d7V2t1Tt1ABeiAAAAAAAAAAAU+tlvbRn7MUv5Lgo7nvarUS9pru4HkzqNkMLUR7GbeUR7GVLlq+nwl6OcLhwxnmS5xcoNLKbXB8sHEtzc9dd4aPbqmeUR7GSdDL6T+UolNpqZURceknZHPBzeX3lponjUUvtWPkbOHyb5bWrad6V3rER2WwAOgrAAAAAAAAAAAPPrOLW+bk895fyaim3wS4soW81yl+J5+ZXlnWO0/1L2vl52cLNTvTnq7912TgoxlhJrefV1YSM+blC9w8qvSST31Lt3vDdGs2RW9RJ16iUZze9iUG1x/NHDzfcspTp7XmEl/BhplxRWI06W6/i2v0sILUaW2qHT22RdqhPfaaXFrHb1F9pn6dD9pHm9Fs+Tvrm768QlvpQrlx+LPR0S3VXJ8oyXiSwWpPInoj8f6zZ9ajU7XQAOgygAAAAAAAAAA46x7ujufsModTfXptNB2tpSkorCzxLvaLxobfdj5lNqKqrKFG6MJRTz6SyirN9uYTprqjaHHU6XUzjXJTy87u9FxOsqKIwzKOIx45cmZqo00Z71ddakuuKWUbXxUqmm0uKeXy5nByT3iI3ENP0zPZy09leXCMJQ48m88e/h8SfD7B/Eq6dNXDU22xn6Vsk5JtcMPki0q+ykjZxq0ryI6Z8whljsu4PME+1GTSh5orfso3OuzAAAAAAAAAAAibT/oZ+9eJWuvpIJNr4l3OEZwcZJOLWGmRXs6pfVc1+ojasWjUvYnSuWmiuMd2OeeEZ8nzzaa9xO83x/HZ+4eb1/ks7/+FFuJhtO5hKLzCCtKs/d7joobkWs8yWtnx67LP3G8dBUvrb0vfInj4+PHO6w8m0z5ddLx01f+qOoSwsIFyIAAAAAAAAAAAAAAAAAAAAAAAAAAP//Z"},
+      {id:"p47", name:"HI-POWER MOSQUITO REPELLENT PLAN (50ML)", code:"HPMR-C", category:"Mosquito Repellent", price:183.7, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAMEBQIGAf/EAC8QAAICAQIDBgQHAQAAAAAAAAABAgMRBBIFIVETIjEyYXEVNEGBFCM1coKRwdH/xAAaAQEAAwEBAQAAAAAAAAAAAAAAAQIEBQMG/8QAIxEBAQACAQQCAgMAAAAAAAAAAAECEQMEEiExEzIioUGx0f/aAAwDAQACEQMRAD8A9+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAq6nXQot7Pa5Sxkj+JRXPY8ejM+fVcWGXblfK0wyvleBzXNWQjOPhJZR0e8u1QAEgAAAAAAAAAAAAAxOKfqH8F/pXmk1llnikX8QTw8OC/wBK8k9vg/6Pn+qwyvNlZGrCztjc0fydP7ETEOkTWkqTWGoImO9h9YzX2AAsgAAAAAAAAAAAi1FvZVOS8c4RKVde+5CPWQEDk5vMub6sZ9DOs1l0L9ig3HPmOrtXbUk1CdmXjEccvUxXrsJdav6/16fHWrVe1ZGL5p8vYtmRRY5NSbziSNc1cfJOTGZT+VLNXQAC6AAAAAAAAAAACnrvPX05lwo62X5yXSORR5Pijueqk4dkobox78nnLxzx05n2Gr4go73qNLOOM+V8/Ym4nwym+1XNWKcuTlF5Sx6YKa4WlLO61+irj/w5OOXFcJ3x0plh263+m/w66V1M3PZuTx3HlM9AvA89wzTQ0tHZQ3Yfe7zy8s36nuqg+qRt6Wy8f4+vP9sPL9rp0ADS8wAAAAAAAAAADN4hvdlqraU9mIt+CeDSMzXNR1E1JpbksEZekz2yqK9fGyDtvrcV5ko+PtyJNXKxVPss7sPCTxl/RE0YRUnLtct9ZZQlXCfjZH7SwcjPg5O6Xt20fJLd00Lm4rtFiTjz55wbOm+Xh7GTUq6nlTT++TW0ya08M9DodNhcMNWa8vHOy3wlABoUAAAAAAAAAAAI7K1MkAFZ6ZP6Hz8MuhaBGhBChImSwsH0EgAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//9k="},
+      {id:"p48", name:"HI-POWER MOSQUITO REPELLENT SPRAY (50ML)", code:"HPMR-S", category:"Mosquito Repellent", price:0, stock:0, image:""},
+      {id:"p51", name:"KING DISH WASH LARGE (950ML)", code:"DW-L", category:"Dish Wash", price:500, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AFUDASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAEEBQIDBv/EADEQAAICAQMCAwYEBwAAAAAAAAABAgMRBBIhBTETQVEiMmFxgaEUYpGxFTQ1QlJygv/EABoBAQACAwEAAAAAAAAAAAAAAAADBAECBQb/xAAlEQACAwABAgYDAQAAAAAAAAAAAQIDEQQSIRMUIkFRsQUxYcH/2gAMAwEAAhEDEQA/APuQTgjBkADAwACCcAAEEgAgEgAgAAHQAAAAAIbUU23wcxsjNtLPHwIubVbwVqpPxVh+fIMlwAAwAAAAQADoAkAggkodRvnGyrT1ycXZlykvJI0smoR6mbwi5vEWrMzW2K+uDjw2nmKSec+6ZuqudVW2Fks9veZRjdYpZ8SfH5mUrOdGDzC1DiuS3T6aMs+WGvI6MVzc6lZXOSsisxy/M1dLd+I01duMb4ptejLVVys7IgsqcO56EggmIQAACSSAADL6tFxuquXbDizUKfVIp6Nt+TTK/Ki5VSwmoeWIxZzc37XJxj4Ht4UnHclwecXueF3fY881L3OsmvY7rm4xcV2ZvaSHh6WqPpEwowcbYxmmuV9z6LtwdT8dF7Jso8trskSQSQdUogAAEgAAFLqzf4VRX900i6Z3WZYqqx/lkg5LyqRNQtsRk6u+W9Qh7iXYr+MvNNHFmo22Lbz+uc57cFG66UpTzdtSljbF7ceuX3+5R8l1vWzo+L0rEjbha51PLy4r2W/I+jg90Iy9UmfI6PMal7TlHGFJ85+v1PqdHLfo6n+VEvEThZODZW5OShGSPcgkg6BRAAAJBBIBBn9Tr8e/S05xucsv6GgU9V/UNJ/1+xFck4Y/59k1LyWr+/Rja/p1NE4yshGcm3t45Xbkp27WlGO6EG+VGKR9Fbp6NTbJuTc4tZSfMfT9e5VWmrem8O/dv3PDXzKlldrl0p9vbuWq7a0ta7kc/wAGnDY4bEsZXflPJf6W89Pq+TX3K1uJdNsr3NyjXhtrBY6XxoYr4v8AclhqtSf76f8ASKbTqefJcBALZUAAAJyCMjIBJT1j26zSS9JFvJn9XbUK3FtNN4a8iDkvK2/jPsmpWzwxdR1efTrrKq6IvnlvKzyWLeo23ujEpUqcFLHbL5+3BXrXWLIZjfZZh998S5pNHqL98+oqUpRx4TnLt3z2+htbDxK/RIzCXRL1I6jrZPTSqtUnuTUZvzNHpn8lH5sx7a1TJQ8SNj8trzg2Om8aOPzZR40pO7JPcRYvSVer3ZbBGSG0dMoktg5yAYO8DaAANp4arT+PVsbw85TANZRUotM2i2nqMyzpFkvduil/qzxXQ7c5eoi/owCvHi1JYkWPM2fJYp6RKHvXJ/KJp01KuqME+EsAEldFdb2KI7LZTXqZ6bUMIAmIhhAAGD//2Q=="},
+      {id:"p52", name:"KING DISH WASH MEDIUM (475ML)", code:"DW-M", category:"Dish Wash", price:319, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAMEBQIBBv/EADIQAAIBAwIDBgUCBwAAAAAAAAABAgMEERIhBTFBEyIjUWFxFGKBodE1UhUlU5GxwfD/xAAaAQEAAgMBAAAAAAAAAAAAAAAAAgQBAwUG/8QAJxEBAAICAQMDAwUAAAAAAAAAAAECAxESBCExMkFxFCIjBRNRUpH/2gAMAwEAAhEDEQA/APvwAAAAAAAORErim8Y1NN4T0s9uJaaMn7EHaYjswLYI6EnOjGT3bJAAAAAAAAAAAAAAAAVL26dJdnB+I1n2RDJkrjryt4ZiNzqHd3JSozpreTWPYz/h5dnp7ufPLPI16iacnFrrsTfGPl2ccFP63Db3T4WW7ScVShT5Sisc+ZYMaVeo23FxXlsXrG6dbw6j8RLPujbi6vFktxie7E0mO62AC0gAAAAAAAAAAAY92n8fWz8uPbBsGfxCnivCrnaS0v6FLrq7wynjn7lPSz3SyRSUei+p32y04ws+xwuywr6WSWil8fRa5LVn2weuaa3SJ+H00606nktOCx0ld5q6RvPZoAA9ErAAAAAAAAAAAFPibUbZSfSaLhQ4q/DpR85Z+xX6qdYbfCVPVCk5eRZirfsknJa8c/Urd2MXKTwjynKFVZhLJ5/HfjudbWZjZl9TR4XJTt5NfvaM9x9cl3hT7lWK6ST+xa/T5/Mhk9K+ADvK4AAAAAAAAAABm8Vfi0o+jZpGXxHMr2nFft/2U+t3+zMQnj9TKur3sa8qbSlHCWjzf/NFapxKabjQjGms4bW+em2S3e8OhUqynKc4uT72I6vL8HELG2WHJzl7rH+ClSuKtI5R3+JT37Tv/VayuK87mGa05qTw0+WD6HhbxXqx9EzPs7W3Vypxi4tJ7dGaFniPEJpcnD8E6V/LXJXtHhjxEw0gAdZqAAAAAAAAAAAM2634nH0h+TSM65/UV6xSK/UeK/MJ08uaylLZLZLLM2NDiOqSU6efLb8F2hcynWmpx0QXJye+c8vbqTSUt5Umm2sczRl6WL3i8906ZOMa0ioU8d2a7yS/uSW/6n7wI9VbtXDXS1pJuPXHmSW6/mSfyGIwxhrWsf2Ym3LctMAHQagAAAAAAAAAADNvXpvoyfLCNIyeLLx49dUORV6udY9/xMJ08se9t76VSTtkmm204VFvl+5ZtVfUOF1FWpqVVvGnXl4ezexUocLxnRUp5z1eHguWdhOhcQqTnT0pPOJehKMkXrustPK+9TV7b0I0KcYbyaWHN7t/UucNebqL+VnFRUacZOU3P5Vsvsd8Ly7p+kWzn0pxzV77lamftlrgA7DQAAAAAAAAAAAV7u0jcqOXplHk8AEbVi0almJ0oz4XXz3K0EvLGCP+E3X9aH3ANH0uL2hLnZ3HhdfV3q0cdVjOS7Z2ULVyknmUlhvGACdMGOk7rHdibTPlaABuRAAAAAH/2Q=="},
+      {id:"p54", name:"VIKING GLASS CLEANER LARGE (750ML)", code:"VKGC-L", category:"Glass Cleaner", price:416.67, stock:0, image:""},
+      {id:"p55", name:"VIKING GLASS CLEANER MEDIUM (500ML)", code:"VKGC-M", category:"Glass Cleaner", price:334.5, stock:0, image:"data:image/jpeg;base64,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"},
+      {id:"p56", name:"VIKING GLASS MULTISURFACE CLEANER (140ML)", code:"VKGC-S", category:"Glass Cleaner", price:103.4, stock:0, image:""},
+      {id:"p57", name:"VIKING SURFACE CLEANERS (LAVENDER, ROSE, PEACH & LEMON) (250ML)", code:"VKSC-S", category:"Surface Cleaner", price:238.33, stock:0, image:"data:image/jpeg;base64,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"},
+      {id:"p58", name:"VIKING SURFACE CLEANERS (LAVENDER, ROSE, PEACH & LEMON) (500ML)", code:"VKSC-M", category:"Surface Cleaner", price:430.83, stock:0, image:"data:image/jpeg;base64,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"},
+      {id:"p59", name:"VIKING SURFACE CLEANERS DISINFECTANT (500ML)", code:"VKSC-M-D", category:"Surface Cleaner", price:1145.83, stock:0, image:""},
+      {id:"p62", name:"VIKING WHITE PHENYLE (Dettol) + ONE PIECE TOILET CLEANER 300ML FREE (3LTR(E))", code:"VKP3", category:"Plane & Perfumed Phenyle", price:316.67, stock:0, image:"data:image/jpeg;base64,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"},
+      {id:"p63", name:"LILLY & BEE HAND WASH (Medicated) (225ML)", code:"L&BHW-S", category:"Hand Wash", price:227, stock:0, image:""},
+      {id:"p64", name:"LILLY & BEE HAND WASH (Medicated) (475ML)", code:"L&BHW-M", category:"Hand Wash", price:390, stock:0, image:""},
+      {id:"p65", name:"LILLY & BEE HAND WASH (AB) (500ML)", code:"L&BHW-M-AB", category:"Hand Wash", price:380, stock:0, image:""},
+      {id:"p66", name:"LILLY & BEE ANTI LICE SHAMPOO (50ML)", code:"L&BAL-S", category:"Anti Lice Shampoo & Body Lotion", price:136.13, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAQFAQIGAwf/xAA0EAACAgIAAwQIAwkAAAAAAAAAAQIDBBESITEFBmGREyIyQVFxgaEzkrEUIzQ1Q1NUY3L/xAAZAQEBAQEBAQAAAAAAAAAAAAAAAgMEAQX/xAAgEQEBAQACAgEFAAAAAAAAAAAAAQIRMQMhBCIjMlFx/9oADAMBAAIRAxEAPwDvwAAAAAAAAYbSW29I1V1b6WR/MgNwAAAAAAAAAAAAAAAAABzPfa6yvFxYpvgnY+JJ629cvochC+9txdkmvhxPR1vfn+Gw1/tf6HI1+2/qfW+JPtOXy36n0Tu7ZO3sLEnZJyk4c23v3ssis7tfyDD/AOH+rLM+Z5Pzv9dOeoAAh6AAAAAAAAAAAAYb0tgQsh13T1bVXYoP1eOKejRQx/8AEo/IjG+rC6jmnCTjSjHVUIRhBLlGK0kSSFS9WxJoAAAAAAAAAAAAAANLXqqT8Dc88jlRL5AV8m1Hai5P4Ig49uVPNm9NwXSDaS95Iz5yjjSUIOUpJr1XzXieVmZGmuDlZXW+BSk7PJLzIrTM9LCL1KL8SeVlNitqhYk1xLen1RZlxnQAAAAAAAAAAAAAPPI/Akeh53/gy+QFXmS4MaUuHi19vE53vBCxYuPVHc7LLK2nze+uvvo6W+n00Ut6a6c9a8TCxoSqrhauJwWtrkRZy1xuZZx1+4Xi215stUQEkkklpdEieXGd90AAeAAAAAAAAAAAGtq3XJeBsYa2mgOb7Zy5YV2PbF8Kakm/Lr4EnC7Spymktxk1vXUid5qlLCqtf9K1P57WtHN05vop69FKFi6LiSX00jozibxP2ytuddu+itzS8SaVfZU534uNZZ7UoqTLQ57OLw17AAAAAAAAAAAAAA0c9e43MNJgVPaWMs3Fvx1JJzXJ9dPqihXde9rhnk1Sj8HB8jsZU1ye5Qi38WjH7NV/bj5F58msziJuZrtHxFGrhhHpCKil9iZF7NY1Qh7MUvktG5CgAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//Z"},
+      {id:"p67", name:"LILLY & BEE ANTI LICE SHAMPOO (100ML)", code:"L&BAL-M", category:"Anti Lice Shampoo & Body Lotion", price:229.9, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAQFAQIGAwf/xAA0EAACAgIAAwQIAwkAAAAAAAAAAQIDBBESITEFBmGREyIyQVFxgaEzkrEUIzQ1Q1NUY3L/xAAZAQEBAQEBAQAAAAAAAAAAAAAAAgMEAQX/xAAgEQEBAQACAgEFAAAAAAAAAAAAAQIRMQMhBCIjMlFx/9oADAMBAAIRAxEAPwDvwAAAAAAAAYbSW29I1V1b6WR/MgNwAAAAAAAAAAAAAAAAABzPfa6yvFxYpvgnY+JJ629cvochC+9txdkmvhxPR1vfn+Gw1/tf6HI1+2/qfW+JPtOXy36n0Tu7ZO3sLEnZJyk4c23v3ssis7tfyDD/AOH+rLM+Z5Pzv9dOeoAAh6AAAAAAAAAAAAYb0tgQsh13T1bVXYoP1eOKejRQx/8AEo/IjG+rC6jmnCTjSjHVUIRhBLlGK0kSSFS9WxJoAAAAAAAAAAAAAANLXqqT8Dc88jlRL5AV8m1Hai5P4Ig49uVPNm9NwXSDaS95Iz5yjjSUIOUpJr1XzXieVmZGmuDlZXW+BSk7PJLzIrTM9LCL1KL8SeVlNitqhYk1xLen1RZlxnQAAAAAAAAAAAAAPPI/Akeh53/gy+QFXmS4MaUuHi19vE53vBCxYuPVHc7LLK2nze+uvvo6W+n00Ut6a6c9a8TCxoSqrhauJwWtrkRZy1xuZZx1+4Xi215stUQEkkklpdEieXGd90AAeAAAAAAAAAAAGtq3XJeBsYa2mgOb7Zy5YV2PbF8Kakm/Lr4EnC7Spymktxk1vXUid5qlLCqtf9K1P57WtHN05vop69FKFi6LiSX00jozibxP2ytuddu+itzS8SaVfZU534uNZZ7UoqTLQ57OLw17AAAAAAAAAAAAAA0c9e43MNJgVPaWMs3Fvx1JJzXJ9dPqihXde9rhnk1Sj8HB8jsZU1ye5Qi38WjH7NV/bj5F58msziJuZrtHxFGrhhHpCKil9iZF7NY1Qh7MUvktG5CgAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//Z"},
+      {id:"p68", name:"YUM BEAUTY HONEY LOTION (50ML)", code:"YBHL-S", category:"Cream, Body Lotion & Face Wash", price:161.33, stock:0, image:""},
+      {id:"p69", name:"LILLY & BEE SOFT CREAM (60GM)", code:"L&B SC", category:"Cream, Body Lotion & Face Wash", price:322.67, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAECBAUDBv/EACoQAAICAQMDBAEEAwAAAAAAAAABAgMRBBIhBTFBMlFhgSIUcaGxEyNi/8QAFwEBAQEBAAAAAAAAAAAAAAAAAAEDAv/EABwRAQACAwADAAAAAAAAAAAAAAABAgMRITFBYf/aAAwDAQACEQMRAD8A+3ABRIAADIAAAAACAAAAkAAAAAAAAgkAAWwMAVIlOMPU+fZEW2bFhd3/AAY5Ty8Z7/yBpepS7Rj9iOpT7xX0ZsDHwFboyjP0vn2ZJijJpmuqe9c913CJBbAwBbBPgCXpf7EGC2W6Tfuzh1St13U7nCzaqvTlcYydua7Hz3Sr40dRuha9u7Kz8pm1I5MsMttWrH10qdDdBw36hyVeMYTy8Jrnnnun9Gezp199jl+te5RUJcNJyUcZ7+5onslOX+yOJNtRcZcZ8/uTS9PXY7FYm8Sy9rzy8nO27TVB10wg3lxiln3NFMsST+jPC2uzOySeD2rX9nI3jAXYk5AAAY7a8Sa+0fN9Y0NtV/6vTp4zl7e6fufW2Q3r5RllDL9maUvNZ2zyY4yV1L57S9br27dVB7vMo+fo9r+q6bYlROO7/ty4+jfd0zTWyzPTQb91wWo6dp6HmrTwi15ayzq00mPbiKZY5uFNHTKMP8llkrLbFzJrGF4SXhHQphmaXtyysIc4XLNNcFCOPPkx1Echv4XAAEEYJAFJRb7M8LabZL8JpP5RpBRznV1GPplp5L53IKrqMn+UtPFfG5/2dAAeFVNsV+Uk2e0Ytd2WADkkAggEZGSgCAAJKkgSCABYEACoyAAAADIAADIADIyAB//Z"},
+      {id:"p70", name:"LILLY & BEE SOFT ORGANIC FACE WASH (150ML)", code:"L&B OFW", category:"Cream, Body Lotion & Face Wash", price:641.67, stock:0, image:""},
+      {id:"p71", name:"KING DASH BOARD & LEATHER PROTECTANT (290ML)", code:"KDB&LC", category:"Protectant (Leather, Rubber, Vinyle, Furniture & Plastic)", price:990, stock:0, image:""},
+      {id:"p71", name:"KING DISH WASH (YELLOW BOTTLE) (300ML)", code:"DW-Y", category:"Dish Wash", price:233.33, stock:0, image:""},
+      {id:"p70", name:"VIKING PERFUMED PHENYLE ROSE (250ML)", code:"VKPP-S-Rose", category:"Plane & Perfumed Phenyle", price:280.5, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAQFBgECA//EADYQAAICAQIDBQQJBAMAAAAAAAABAgMRBCEFEjEGE0FRYRQicbEVIzJSY4GSwdEkMzRzNZGh/8QAGQEBAAMBAQAAAAAAAAAAAAAAAAIDBAEF/8QAIREAAwACAQQDAQAAAAAAAAAAAAECAxEhBBIxQRMzUTL/2gAMAwEAAhEDEQA/AN+AAAAAAAAACv4vxjT8Jrg7lKU7H7sI4yytr7V1zm4exzi0s+9ZFEXcp6bLowZLXdK4NECFwvilHFKZTp5ouLxKMuqJp1PfKK6ly9V5AAOkQAAAAAAAAAAAAAADD9t5t8Wog+ipyvzb/gooym888nL47mk7YaG27iNWoW1fdqGWvHLZUV8Pk19rbzwZ7xXT2ke70lSsS5LrsTJ+0aqK6OEX/wCmuMx2S0dunvvskvq5R5VLHimactxpzOmeZ1jTzNoAAmZQAAAAAAAAAAAAAROI6l6elY2c3yp+R1Lb0dmXT0iDxhQ1k66Vl8ks5XmRPZq65uKSl4ZOq5ReU9zneR82apnXB6cQ5Xaiy4S4VRlUtm3zFkZ6q5Kaak1jxL3T2d7TCz7yKcs6ezH1ENV3fp9AAVGcAAAAAAAAAAAAFVx2cYwoU3hOT39cFqUfaf8Atab/AGP5Ep8luD7EV3eVffl+kd5V96X6SCrJSnyQrlLdrKaxlY9fVHvFuJxWls7yCcnlrKS8cZ6bMseZI9R1onV2VcyzOX6TQ8Oaloq2umHj/syCslGUVZXKGWlu149HjOceprOE78Np+D+bOXfcuDN1X8pkwAFR54AAAAAAAAAAAAKPtTtRpv8AY/kXhQ9rP8XTv8X9mdnyW4PsRmpTtrtnGlTcZyjY8JP3kep6nVuE5Zscp4T2Slvvs8bJM+lWks1alyVOSguZtPCX5kfkq52lU5NTSblNrbxa/IspQvR6FLl8kmm6/USlK9tZabbSTlh5S6dEa/hH/G0/B/MzWk0kbdFO2qM6lVjmTfMpZWdn5Gk4NtwynfPX5kO6WuFozZ6TxpL9JwAImMAAAAAAAAAAAAFH2qX9JQ/K39mXhT9o3y6emXLzYs6L4HV5LcPGRFTLVR+h46XTUuc7E1Y0k1H1a9SodVjqSnVNS+0+ZYyvIsVjVPu4R7uXXmZ5lV7JNO6TlB9OWWFn1ySmKb1s2XknBLps8cOttWlWk2jzvMmn1S6I1nCFy8PrXln5mcqffVvlpcFJ4U/z6mj4TBV6CEFJSw3uvicevC9FOa5vGqXsmgAiZAAAAAAAAADjPnJyR9RgAjO1og8SslONTWFyye7+BaSqjLqiJqtBK2DULVF9VlZwdXknjaVJsodRB3QcfqY5ecqLyfCvTOFkZc8JJeDTwy5+jNUl9qmT88tfsc+jdV+D+p/wXJwuUb/kxa0RY3TlHkaq5WsbJ9C54XUqdDXCOcbvchx4ZqXj36o+u7/gtaq1XXGKeyWCFufRnzXDWpPYAKzKAAAAAAAAADoABwAADAwAADoABwAAAAAAAAH/2Q=="},
+      {id:"p71", name:"VIKING PERFUMED PHENYLE LAVENDER (250ML)", code:"VKPP-S-Lavender", category:"Plane & Perfumed Phenyle", price:280.5, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAQEAAwEBAAAAAAAAAAAAAAYFAQMEAgf/xAA+EAACAQMBBQMGCgsBAAAAAAAAAQIDBBEhBQYSMUETFFEiI2FxscEyM0RygYORocLRFRZCU2Jjc4KTorLh/8QAGQEBAQEBAQEAAAAAAAAAAAAAAAMCBAEF/8QAJhEAAwACAQMDBAMAAAAAAAAAAAECAxESBCIxITJBExRRYZHh8P/aAAwDAQACEQMRAD8AvwAAAAAAAAATG8m8VexvI2lmoqaipTm45xnkkZH6y7TUFLvTcs6p044J1kSejqx9JkueSL4GFuztuptanVp3EYqtSw24rCkn7zdNp7W0QuHFOaAAPTAAAAAAAAAAAAAAAB+eb1YW8dzhc4wf+qMpy0NbfKnUobbdaaSVeK4EnnSOmTGc32afZy9Zj7a77kfTxdREwkym3CWL6+fVwg/vZakbuFQqZubpJOnPzb11TWvL6SyNKXK0zhzUqttAAHpIAAAAAAAAAAAAHEpRhFyk0opZbfQ5JzfC7qUKNtQi3wVnJzSeM4xp95uJ50pPUtmNty9htO+7RRXZU1wwbWuPE8c5KVvCm6UEotttLU475SXySP01JHHfKfLudPHz5fmfUmFKSSKpG1uxtCnY1ZWtXEKVWWYy8JeksD82d5SlFrukFlaNTloWW7F1Vu9kqVaTlKnNwTfNpYx7Tk6nHrvRil8muADjMAAAAAAAAAAAAAkt95ONax4sOGJ4XXOhWkfv48T2f9Z+ErherRqfJP8AeKS52ql9Ycq6o9LFP6z/AMPm1tKl0pOEorhaznonnX1LBqWtjd2fDTXd5qs1wuaby8N4+xHTk6iZ2l5L/TZmd6ov5HGPp7RvBXbk1OPZlfDXCq7wsa8kTNTY9xxZnOlHjk4xxl8TXhjx55KHcTTZtyv57/5RPJlm40mYuWkU4AOUiAAAAAAAAAAAACQ39SzYSfjNewryQ3++BYP+KfsRTF70anyT9g6aVRVLmdHiXC1HXii+fQ9PeHGrFq+rSk+BOUeiWc9OnT1ngsqFe4uIwtovjSzxJ44V4t9Eb9GwoUpRhf7Wn2mFLhhLCX9zKZcU8nTf+/gs8jXpszqt3GjRfYX9xKS+Asac8+GnX7Sg3EednXX9f8KPPOw2TfxhGF1UlNryG6jePce3c6g7ajf0HLi7O5cc+PkokuMxxW9/v+jF3yRRAAwSAAAAAAAAAAAABJb+xzTsX0Up+xFaTO+ailZVKizThKfEvWlgpj9yNT5MnYyt62xrihGahXm8z8WlySOidu6Maia4qUIeTGWU8vn6PE8vaWtV9nQg1UlpB8OMP1ndTt7y3zKcvNrWTS45fRkpcuW6b9DfDb9D7jtSxtaXHbWid29MyeYw8H6WUG5akrO5cm5SlVUm31bimYLuISwqcKkk9Pi1n16dNSh3Qg4293L9mdbij6FjHuMVc1PaLhytNFCACRIAAAAAAAAAAAAE9vRVp0rixdam5w85mKWVyWChMPeq0rXFlSqUKM606U9YQWXhrU3j1yWz1eTCrTs3TlKjRgquPJalFYfQy5/pGokpVYYWulWK9529yuP3FwvQ6MvyOO5V8/E1/wDDL8jtWLH+UUT18mjaXVChTSlTam0uOTqxeX9ucG3uxVVdXtSMZRUqsdJfNRKKyuG9Le4n6I0ZfkWW7NrVtdm+epypTqTcnCXNdF7CGXHjhdvk8qt+WawAOYmAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/Z"},
+      {id:"p72", name:"VIKING PERFUMED PHENYLE JASMINE (250ML)", code:"VKPP-S-Jasmine", category:"Plane & Perfumed Phenyle", price:280.5, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAUGAQIEAwf/xAA7EAACAgEBBAUIBwkBAAAAAAAAAQIDEQQFEiExBhNRccEUIjJBYXKhsTM0Q1JigZIjNUJTVHORwtHx/8QAGQEBAAMBAQAAAAAAAAAAAAAAAAECAwQF/8QAHhEBAAMAAgMBAQAAAAAAAAAAAAECAxEhBBIxMyL/2gAMAwEAAhEDEQA/AL+AAAAAAAACp9L9t6vQ6qnSaOx1b0N+co4y+OEvZyIOrbuvVVm/rb9/hut2cvyxxM7aRE8OvPxLaV9uX0gFb6I7X1Ov6+jVTdkq0pRm8ZaLIXrb2jlhpnOdprIACWYAAAAAAAAAAAAA+edOOHSGP9iPzkQ0M4zkt3SzZ1c9fTqrEpOcerUU3yXHxOGrZdUq8qhf5ZxbXiLO/HyqZ1isvXoP+9L+P2H+yLuVvoxs6On1N2oglHh1bi2+8sh05d0iXNvpGl/aAAGjEAAAAAAAAAAAw2km28JGTg2rdKuNVa5Tbz+RS9/Ss2RLm1Mlq705JbkfRz8zSUUuKSS7DTrV2DrV908i15tPMs+XZo7FTPHKMiSISNy+78ST0Vjso4+ptI7PF05/iV6y6AAdywAAAAAAAAAABC7dvVWo00JLOVJr4E0V3pN9b0b/AAz8DDyPzlE/Hh5VH+W/1GPK61JJxSb5ZmRzvsds41xhu1tb8pN+blZT7vV3m0qNR1/VyWni5JvLbw0ksvlw5nnUxvbvjpaMLT2ko6mGeNb/AFExsi5W1WJLG7LwKo7dRRWnbXHe3HNRy22lz9WFzLJsD6O/3l8jbx63prEWROc0+pYAHpAAAAAAAAAAABXuk/1nR+7PwLCV7pP9Y0fdPwMfI/OUT8QV9MHKU3mO8kpYljexyyaKMVmTus898f2vF8Mdp6anUQr3a3W7rZ+hVGOZS/LxOjZuh8r0sL7tNHTSm2pVzgs4TweflXW1evi1dL8ccvCmiMo7jnZKGEvpG1y5cyzbA+jv95fIqu0NVHYur01E1VZVfwfVx3ZRfBZxnDRatgpqu9P7y+RrlW9do90TMzPMylgAeiAAAAAAAAAAAEB0ljvX6Pun4E85Jc2QPSJdfdpa4vHCbcuzkY795yiVat0+o0u26doVUrUxUNx17+7KHa128yao2l19kkqba1HPGyHpLPq7zkr1EKU691yw352eZ6uuN25ZJuEJLgk+XecNN70r6pjvqGdVJ3enh1tp7sknl+BM7Aea7/eXyIaqKqsmoRlYuHHKJrYNnW1XS3d3zksMtha19ubScTH1KgA9IAAAAAAAADWaeOBsAOK7eREbQr6+VSl6Kll+32FjlBSWGiK12ztQ5b+llCTX8M3j4mWtZmsxCJcE66Zycp0Uyk/W/wDwj4bPurm5V3wi32ZRNR0ur3fO0+H7Joz5Nqv6Z/rj/wBOCaaT1MKc2c2nbhVGFm7NrnJy5/AldmVtRttf2klw7MLBx+S6przaEn+KaJTSVSpojCeN7m8csm/j0tFuZhaJmfr2AB2rAAAAAAAAAAAAABgxgAjgZwACQAAAAAAAB//Z"},
+      {id:"p73", name:"VIKING PERFUMED PHENYLE ROSE (500ML)", code:"VKPP-M-Rose", category:"Plane & Perfumed Phenyle", price:390, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGgABAAIDAQAAAAAAAAAAAAAAAAEEAwUGAv/EADEQAAIBAwMACAQGAwAAAAAAAAABAgMEEQUSIQYTIjFBUWFxFEKBwSMyNDVDcpGh0f/EABkBAQADAQEAAAAAAAAAAAAAAAABAwUCBP/EACIRAQADAAIABgMAAAAAAAAAAAABAhEDEgQTITEycTNBYf/aAAwDAQACEQMRAD8A7wgkEiCCQBAJAEEgASAABAAAAAAAAAAEggAAAAAAGuv9bsrCcoV5vdHGUlzyZ7HULe/g5W8923GfqcZ0nhOWrV2otpSXOPRG26GxcVX3Ra7McZXqzz15LTfP00L+FpXg8yJ9XTgA9DPAAAAAAAqanVnSs5SprMu7AiNdVr2tENTq8IXVRyS5XC9S3o8qdGPVLjd3e5pfibl/L/o9U7m6jUi9vj6F3X0xq24dp011wMdvN1LenKXe1z7mQpZMxk4AAIATgYAg1HSacqel7oScWprlezNxg1HSeOdJfGe2uPMLvD/lq4mNzdzbiq8lxnl4MfxV1jd8TVTXOG+/k2FGrUpxSnTowknu/FWG8Ir3UnUVPs0tuf43lZ8vuc27W/jZi22zHe6S29Lt23luPLLZT0f9rt/6/cu4OmJy/OfsIPRGArSCQQINfrcW7HKWXGalj2NiVNTkoWU5yhOoo8uMFy/Yl1SctEuTlOthJ2/WNfNtz9CGp1Kbh1CpqT8Y4eeP+GOvf3UqrWKKcVhKLeVLPP8AlYL+m1neRlGo1vUYtRUeF58+L9CqtuSbZMRn20Zma17Y6HS47dOoxfgvuWzFaR220F5IzFrOtO2mQgkEOQEZGWBJT1X9FNNdmXZfPgWtxU1N5spcN4abwTHu74/nDkVY4qSqddDe22+z5nujayo1nVpXChN9zUc7fZGacoxl+ZCm1KaSefbkt61a0zsZLqtPnKdnByxnuyljPqWCppzkrOClFrv4aLOX5FU+7IvERacegeeSSHIACQDAA84AAHoAASMgED//2Q=="},
+      {id:"p74", name:"VIKING PERFUMED PHENYLE LAVENDER (500ML)", code:"VKPP-M-Lavender", category:"Plane & Perfumed Phenyle", price:390, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGwABAAMBAQEBAAAAAAAAAAAAAAEFBgQCBwP/xAA2EAACAQMCBAMEBwkAAAAAAAAAAQIDBBEFIQYSMUEiUXETQmGRFBUzYrHC0SMkMnKBgqGy8P/EABgBAQEBAQEAAAAAAAAAAAAAAAACBAED/8QAIBEBAQACAgIDAQEAAAAAAAAAAAECEQMSITEEEzIUUf/aAAwDAQACEQMRAD8A+gAAAAAAAAAAAAAAAAAEASDMahxTUtrupRpW0JxpzcOaU3ltddiw0PWnqjqRnSVOcIqXhllNN4/p0POcmNuo98vjcuOHezwtwAejwAAAAAAgk/K4r07ehOtVlywgstgfOdW8GoXMppxUq08NrruXvBcWri4k08SpxafnuZvWdQnf1q9xzOMJVP2cO2cY/BfgXHCGtwo1vo1xLwVcKM37rWyXoP5Jje0vlv5PlZ58fTTdAgkMAAAAAAGY43ryhp3Im1HHNhPq8pb/ADZpzI8drlt1NPfk6eeJL9S+PxlFYTd0wft5P3UeoV5J7Rx6HiDrVJqNNOUn2SP0pc83KPOlOOXiS8jRlzTHzWjHiyt0+q6DWnX0qjKpJyaWMt5fTuWJUcMLGlLdvxd/5UW5lyu7uM+U1bEgA4kAAAyPHm9rFfcf+0TXGY4xjCUaCqfwe9tnbmWSsfb04v1GNtnZezUlRquomk5QT2e+V/3n8Dxd/RFScrelUpzzlOSfXPn6Hb+5VIxlB1LeXeFPbO/V7eQnStHCcalWvPKUoc27XXv2zsV0m2vbbcLb6Sn978sS5KfhdNaUk+vN+WJcEX2x8n6oADiAAADP8T0HXjFJZ8OP8mgKnXLinbW9WrJ+KNPEV5N7J+hWPteF1WcpWEaFDnkpwSwptzcVn5HPO7s4KCgoV6k3iMZOT5k+mOnfBWV9RuatlT5pJexi4tyk5dWvjvg6dEsqFSvUqV7ipGUVzU3JRxjt1/A59Vl7dq0XLw3uk0o0baUIpqKm8J+iO45NPqQqUHKElJN9nnsdYvtly9gAOOAAAGU43SVOk8buLUviso1ZVa5o/wBa06aVX2c4ZxmOU0y+OyZbrsuq+ZeBP7KHyJTjn7OHyNRLgm85ni4t8f3foe6XBN0ppzuaGO+FJmn7Mf8AV7i64SilpPN7zlh+iSwXZyaXYx06zjbxm54bbk1jLZ2GXO7ytiL7AQSS4AAAAAAAAgAASAAP/9k="},
+      {id:"p75", name:"VIKING PERFUMED PHENYLE JASMINE (500ML)", code:"VKPP-M-Jasmine", category:"Plane & Perfumed Phenyle", price:390, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAQFAgYHAQP/xAA2EAACAgECAwQFCwUAAAAAAAAAAQIDEQQhBRIxBhNBUTNhcZGxFCIyNVJyc4GhotEVI5LB4f/EABkBAQADAQEAAAAAAAAAAAAAAAACAwQBBf/EACARAQEBAAICAgMBAAAAAAAAAAABAgMREiExQQQTMlH/2gAMAwEAAhEDEQA/AN/AAAAAAAAAzgxVsJPCnFvyTQGQAAAAAAAAAAAAAAAAAA1ntzbZDh+nhCbjGduJJeOEzTJTbriubGOjSwzde2mknqdNpZR+jCx5891sa1ZweyFPP87pnoZOaya9vR/H5+Pjx1q+28dn7p6jgejttk5TlWsyfV42LEr+A0T03BdJTPHNGtdPeWBqnwwa6ur0AA6iAAAAAAAAAAAM4QInE5yho5OPVtL9SOr45tETWX/KLNvRx6LzfmfBrZZ3MVOzwj+0y57fs/sR5GtXd8qq77T+H34/sSfT6L/0TignbZGPNjDW6aWC/XQ9D8bd1nq/SeaAA0pAAAAAAAAAAAFR2nvlpuE97BJyjZDGfW8FuUXbL6il+LD4kdTuWVHfrNa4uM6nwePYz18a1eNp/qV+nrVzacsYWfyXX9CetG1XKlWVtZW+N221tnwZl/XPqM3Fw8+55S+mNnGdZ3TcoqUcbvOcHQK8d3FLphHM9dS9PW4qTlGXmttvFHS6vRQ+6vgW8OPHtu3rN6knVnyzABegAAAAAAAAAAAUXbL6il+LD4l6UfbH6in+JD4nL8Ib/mtR0minqKueNkYLmxv+X8n17lvf5Hcs+UiJTZauSNbl8zLSSzjOzZMVl7eZ3WSzs8VNZW+2ceso7ywYvr0jazTzWnVsa5Kvl3TeeXDxuzpVXoofdXwOaay++UJVWTk4N5w44zv/ANZ0yv0cfYizHX008HvtkACxpAAAAAAAAAAAKXtZDvOCyhnHNbWv3Iuin7VVyt4LOFazOVkML88nL6iO/wCaqtPwanSNThdJXKLWX09uCVDQwcFmxuWPBtL3ZMaIxWmjlSlbyYlOSblnxPpDk7lRlGaS6Y5slFxxavdkdxfCdZ9IGu4RDUUStldm6EMZS+bt6uvmbdD6EfYjWOJRjLRW8ilG6UescrPqNog04Ra6NIsxMydZckndr0AFiQAAAAAAAAAABC4vj5BJvwlH4k0+WqojqdPOmTaUl1RHU7zYVrvdxfn7x3S9fvJn9L1FaxG2El4c0Hn4hcP1P26/8X/J5/6OT/FXVQ+RJrd7tdX6zZyoo4VN3QndYmotNRisZLc1cHHcS9p5nQADQkAAAAAAAAAAAAAAwgAB6AB4AAAAAAAD/9k="},
+      {id:"p74", name:"KING TILE & BATH ROOM CLEANER MEDICATED (250ML)", code:"KT&BC-S-Medicated", category:"Tile & Bath Cleaner", price:250.25, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAEGAgMEBwX/xAAzEAABAwIEBAMHAwUAAAAAAAABAAIDBBEFEiExBiJBUWFxsRMVMjSBkdEzQ3JSYoKhwf/EABkBAAIDAQAAAAAAAAAAAAAAAAADAQIEBf/EACsRAAICAQEECQUAAAAAAAAAAAABAhEDBBIhMVEFExQiMkFhccEjM0JSsf/aAAwDAQACEQMRAD8A9AREQARFCAJRQCCiAJREQAREQAREQAUIvkYjjsVK8xQNE0g+I35WqspKKtl4Y5ZHUUbXTESObmOhI3W6jkL5DdxOio9VKyepkmlZnc8knmsF2YRiLsOe8wsDg+2ZrneiQs6s3y0MlG095eUXFh+JQV7D7Mlsg+Jjtx+V2LQmmrRz5RcXTJREUlQiIgDRWNe+kmbGS15Y4NI6Gy83M0lrZivTivMatzRUy5QbZ3W8rrLqFwOr0a/EjEvceqB7hs4rFvMLhpPkscw7FZ6Ora4H2eHjLLjFOA92hJPkAr2qVwgW+9DcamM2/wBK6rXgXdOH0g/q16EoiJ5hCIiAMXmzHHsF5pBAKuokaZBHZjn5nbad/BekVJtTyn+w+ipFJT00tLEX0FU6QtsXxOID0qeN5JJI3aXNHDCUpedL+iChMNPUGOSzmvyNErbBx0trfS99PosJ8ItKQXSF7szgQAALdDfr4BdscbGXiyR0wFvmJDK4f47LupTQQiwnEr3HVziTc+iOz0t4dse03E4sHpDh+P00RJ54yTffUH8K4Kt1HLxNQHu0j1VkGynGqtIVqJOWzJ8WvlkoiJhmCIiANNV8tL/B3oq5RS+x4ficDYhhA1t1PVWWcXheO7T6Kt4cIn4HE2XYB1tba3Kr+aHR+0/dfJ80vEhe90U5uCTaXXS1+vYgLKOMCUNFNK14O5lOhFtd+5C3ijqjHdsTuYC5vpvc7HXqtkNPVOqIJomB0Zk53F19L/lN65cmHVPmjfVMyY7hYvcjS/eysqr1WL8QYaPMqwpEOLJzeGHt8slERMEBERAGLhcW7qo0tO6ooGwNcAWSvHNtureVV4WPikrQwfp1DrjwKq3Ukx2PfCSXofSp4RDStgcMwAsbjdA5tPGGgXN9GtHouT3lLGBnju3rp0XM6umfzNnjiJ6Gx+mlz9bhTd7yrg06Z1PDn8RUAcLERucR23VgVawqodW48yVxBMcBBAaRlPbx33VlVYeZfNa2U+RKIiuICIiAIVExWslGJ1YikLWOkNwNjbRXsrzioa728mb4sxv91n1DaSo6PR8YylLaNb3OebucT5lQCRsT90sllktnYqJ9vhSUMxNzD+5GQPpqriqHgTXDGKbKdc2vlZXwbLZgfdOJr0lltciURE8whERAELiqMHw+peXy0sZed3DQn7IihpPiSpOO9M5ncN4YdoXjyld+VLeHMLadYHO/lI4/9RFGxHkM67J+zOylw6jpDenpo43f1Buv3XSiK1ULbb3slERBB//Z"},
+      {id:"p75", name:"KING TILE & BATH ROOM CLEANER LEMON (250ML)", code:"KT&BC-S-Lemon", category:"Tile & Bath Cleaner", price:250.25, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAUGAQIDBAf/xAA2EAACAQMCAwUGAwkBAAAAAAAAAQIDBBEFEgYhMRMiQWGRUXGBobHBI3LRFBUyMzZCQ2SSov/EABkBAQEBAQEBAAAAAAAAAAAAAAACAwQBBf/EACQRAQEBAAIABgIDAQAAAAAAAAABAgMRBBIUITEyQVEiYYHw/9oADAMBAAIRAxEAPwC/gAAAAAAAAGNyz1XqBkAAAAAAAAAAAAAAAAA4Xl3QsreVe4qKFOPi/og9ktvUcdVqOnabk8d9J8yMldQ2v8WOfzIhNY4jqapTna06UadtLru5yl+hESp03RUdlNOPsXMyvLPw7seD11/L2fTbaTlbUpN5bgnn4HUp2l8WzpyjR1CEXTWEqlNYa96/Qt1KpCtTjUpyU4SWYyT5NF51NfDl5eHfFetRuACmQAAAAAAAAAABWOPKMpaXRrLOKdXDXvWCzkJxdh6K6TXKrWpw9ZE7+ta8N65JXzlSOjl3SyR0KwT/AJc375sxTsLCpKMP2eWH0bmz50586lsnw+n6nKruXM+mcLUXR4ftFLOZRc+fm8lU1TSrOlp9epRpbakFnO5vHMueiVFV0WymvGjH6HT4bc33Y5vFcvnxOnuAB1OAAAAAAAAAAAAgeLG3b2NNf3XcOXuTZPFe4sU5S0yNOShN3PKTWcPaydTzTpfHetdoycbt3E3FydLPdinh/wAPX3J+BwnC+oUYdpVxKTeU5d7p0WOufkz1Vlc0qea19JvHKNKGM/E50btUE5UrXMn1k1JyfxZGPD5xOre/8L4m/rpmvbVZaddqopU4bZOEXLMmsePN4JzhOe/hyzfsi16SZFK6lcW1xGpDa+zljk1lYPfwU88OUPKU1/6KmZm9Rfm83Hb/AGngAWxAAAAAAAAAAAK/xVyraU/9pfRlgK9xgsW9hU8IXcPueX4Xx/ZF6h2jqx70oJLGc4T+Xm/Q80IravxKucco7unN/Y9NerC4vIW84yxGb2tPnnodZ6bRp1IOEeTaU3KXNryK1m9omMX3ta6eoSs7iUZ7ntalmWcPDyiT4I/p2l+ef1PJG2o2lrXVCO1TUpPn1eD28FrHDlDzlJ/Mn8xr1Jx2T9xOgA9ZAAAAAAAAAAAEBxpHOh71/jrQl8yfIjiqmqnDt4n4QUvRo8vwvj+8QtrUoOpKctqecqT6nslUp7d0akZY8c9CtrUbSfZZlKOIre2nzePDB2V5p0abjKtXnF45bWkseXiN82Zf+qvT7k9pUjXrQhb3FSrJqfZySbfJcuiJvhSHZ8OWa9sW/Vsp1zq1tK3rQjKtUnODit0ElzL1ocFT0Wyiua7GP0MuPetfZW8XGOrOvd7gAbMAAAAAAAADJjIZqwM7iA4zuez0CpDOHVnGHzz9idIzX9Pepae6EZKElJSjJrKPL8L47JuWvmSOm7u4JyXCl8n3alCXxa+xquFdQ9tD/t/oYeSvq+o4/wBoF9T6Vwpcdtw/a56wTg/gysU+Erxvv1qEV5Zf2Lfo9l+79OpW27c45zLGMtsvGbK5fE8ud5kiRyMmplGrhbAwZAAAAAAGDGAAG01lDKwABr2SHZIADPZI2UMIADODOAAAAAAAD//Z"},
+      {id:"p76", name:"KING TILE & BATH ROOM CLEANER MEDICATED (500ML)", code:"KT&BC-M-Medicated", category:"Tile & Bath Cleaner", price:365.75, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AE8DASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAEGAgMEBwX/xAAzEAABAwIEBAMHAwUAAAAAAAABAAIDBBEFEiExBiJBUWFxsRMVMjSBkdEzQ3JSYoKhwf/EABkBAAIDAQAAAAAAAAAAAAAAAAADAQIEBf/EACsRAAICAQEECQUAAAAAAAAAAAABAhEDBBIhMVEFExQiMkFhccEjM0JSsf/aAAwDAQACEQMRAD8A9AREQARFCAJRQCCiAJREQAREQAREQAUIvkYjjsVK8xQNE0g+I35WqspKKtl4Y5ZHUUbXTESObmOhI3W6jkL5DdxOio9VKyepkmlZnc8knmsF2YRiLsOe8wsDg+2ZrneiQs6s3y0MlG095eUXFh+JQV7D7Mlsg+Jjtx+V2LQmmrRz5RcXTJREUlQiIgDRWNe+kmbGS15Y4NI6Gy83M0lrZivTivMatzRUy5QbZ3W8rrLqFwOr0a/EjEvceqB7hs4rFvMLhpPkscw7FZ6Ora4H2eHjLLjFOA92hJPkAr2qVwgW+9DcamM2/wBK6rXgXdOH0g/q16EoiJ5hCIiAMXmzHHsF5pBAKuokaZBHZjn5nbad/BekVJtTyn+w+ipFJT00tLEX0FU6QtsXxOID0qeN5JJI3aXNHDCUpedL+iChMNPUGOSzmvyNErbBx0trfS99PosJ8ItKQXSF7szgQAALdDfr4BdscbGXiyR0wFvmJDK4f47LupTQQiwnEr3HVziTc+iOz0t4dse03E4sHpDh+P00RJ54yTffUH8K4Kt1HLxNQHu0j1VkGynGqtIVqJOWzJ8WvlkoiJhmCIiANNV8tL/B3oq5RS+x4ficDYhhA1t1PVWWcXheO7T6Kt4cIn4HE2XYB1tba3Kr+aHR+0/dfJ80vEhe90U5uCTaXXS1+vYgLKOMCUNFNK14O5lOhFtd+5C3ijqjHdsTuYC5vpvc7HXqtkNPVOqIJomB0Zk53F19L/lN65cmHVPmjfVMyY7hYvcjS/eysqr1WL8QYaPMqwpEOLJzeGHt8slERMEBERAGLhcW7qo0tO6ooGwNcAWSvHNtureVV4WPikrQwfp1DrjwKq3Ukx2PfCSXofSp4RDStgcMwAsbjdA5tPGGgXN9GtHouT3lLGBnju3rp0XM6umfzNnjiJ6Gx+mlz9bhTd7yrg06Z1PDn8RUAcLERucR23VgVawqodW48yVxBMcBBAaRlPbx33VlVYeZfNa2U+RKIiuICIiAIVExWslGJ1YikLWOkNwNjbRXsrzioa728mb4sxv91n1DaSo6PR8YylLaNb3OebucT5lQCRsT90sllktnYqJ9vhSUMxNzD+5GQPpqriqHgTXDGKbKdc2vlZXwbLZgfdOJr0lltciURE8whERAELiqMHw+peXy0sZed3DQn7IihpPiSpOO9M5ncN4YdoXjyld+VLeHMLadYHO/lI4/9RFGxHkM67J+zOylw6jpDenpo43f1Buv3XSiK1ULbb3slERBB//Z"},
+      {id:"p77", name:"KING TILE & BATH ROOM CLEANER LEMON (500ML)", code:"KT&BC-M-Lemon", category:"Tile & Bath Cleaner", price:365.75, stock:0, image:"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAB4AHgDASIAAhEBAxEB/8QAGwABAAIDAQEAAAAAAAAAAAAAAAUGAQIDBAf/xAA2EAACAQMCAwUGAwkBAAAAAAAAAQIDBBEFEgYhMRMiQWGRUXGBobHBI3LRFBUyMzZCQ2SSov/EABkBAQEBAQEBAAAAAAAAAAAAAAACAwQBBf/EACQRAQEBAAIABgIDAQAAAAAAAAABAgMRBBIUITEyQVEiYYHw/9oADAMBAAIRAxEAPwC/gAAAAAAAAGNyz1XqBkAAAAAAAAAAAAAAAAA4Xl3QsreVe4qKFOPi/og9ktvUcdVqOnabk8d9J8yMldQ2v8WOfzIhNY4jqapTna06UadtLru5yl+hESp03RUdlNOPsXMyvLPw7seD11/L2fTbaTlbUpN5bgnn4HUp2l8WzpyjR1CEXTWEqlNYa96/Qt1KpCtTjUpyU4SWYyT5NF51NfDl5eHfFetRuACmQAAAAAAAAAABWOPKMpaXRrLOKdXDXvWCzkJxdh6K6TXKrWpw9ZE7+ta8N65JXzlSOjl3SyR0KwT/AJc375sxTsLCpKMP2eWH0bmz50586lsnw+n6nKruXM+mcLUXR4ftFLOZRc+fm8lU1TSrOlp9epRpbakFnO5vHMueiVFV0WymvGjH6HT4bc33Y5vFcvnxOnuAB1OAAAAAAAAAAAAgeLG3b2NNf3XcOXuTZPFe4sU5S0yNOShN3PKTWcPaydTzTpfHetdoycbt3E3FydLPdinh/wAPX3J+BwnC+oUYdpVxKTeU5d7p0WOufkz1Vlc0qea19JvHKNKGM/E50btUE5UrXMn1k1JyfxZGPD5xOre/8L4m/rpmvbVZaddqopU4bZOEXLMmsePN4JzhOe/hyzfsi16SZFK6lcW1xGpDa+zljk1lYPfwU88OUPKU1/6KmZm9Rfm83Hb/AGngAWxAAAAAAAAAAAK/xVyraU/9pfRlgK9xgsW9hU8IXcPueX4Xx/ZF6h2jqx70oJLGc4T+Xm/Q80IravxKucco7unN/Y9NerC4vIW84yxGb2tPnnodZ6bRp1IOEeTaU3KXNryK1m9omMX3ta6eoSs7iUZ7ntalmWcPDyiT4I/p2l+ef1PJG2o2lrXVCO1TUpPn1eD28FrHDlDzlJ/Mn8xr1Jx2T9xOgA9ZAAAAAAAAAAAEBxpHOh71/jrQl8yfIjiqmqnDt4n4QUvRo8vwvj+8QtrUoOpKctqecqT6nslUp7d0akZY8c9CtrUbSfZZlKOIre2nzePDB2V5p0abjKtXnF45bWkseXiN82Zf+qvT7k9pUjXrQhb3FSrJqfZySbfJcuiJvhSHZ8OWa9sW/Vsp1zq1tK3rQjKtUnODit0ElzL1ocFT0Wyiua7GP0MuPetfZW8XGOrOvd7gAbMAAAAAAAADJjIZqwM7iA4zuez0CpDOHVnGHzz9idIzX9Pepae6EZKElJSjJrKPL8L47JuWvmSOm7u4JyXCl8n3alCXxa+xquFdQ9tD/t/oYeSvq+o4/wBoF9T6Vwpcdtw/a56wTg/gysU+Erxvv1qEV5Zf2Lfo9l+79OpW27c45zLGMtsvGbK5fE8ud5kiRyMmplGrhbAwZAAAAAAGDGAAG01lDKwABr2SHZIADPZI2UMIADODOAAAAAAAD//Z"}
+    ];
+    saveProducts();
+  }
+  applyShopSettings();
+  render();
+}
+
+function saveProducts(){ try{ localStorage.setItem('kb_products', JSON.stringify(products)); }catch(e){ alert('Save nahi ho saka - storage bhar gaya hai.'); } }
+function saveOrders(){ try{ localStorage.setItem('kb_orders', JSON.stringify(orders)); }catch(e){} }
+function saveCustomers(){ try{ localStorage.setItem('kb_customers', JSON.stringify(customers)); }catch(e){} }
+function saveCategories(){ try{ localStorage.setItem('kb_categories', JSON.stringify(categories)); }catch(e){} }
+function saveSettings(){ try{ localStorage.setItem('kb_settings', JSON.stringify(shopSettings)); }catch(e){} }
+
+function applyShopSettings(){
+  document.getElementById('shopName').textContent = shopSettings.name || 'Order Book';
+  document.getElementById('shopTag').textContent = shopSettings.tag || '';
+  document.title = shopSettings.name || 'Order Book';
+}
+
+function fmtMoney(n){ return 'Rs. ' + Number(n).toLocaleString(); }
+function fmtDate(iso){ const d = new Date(iso); return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short'}); }
+function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+function render(){
+  renderStats();
+  if(currentTab === 'orders') renderOrders();
+  else if(currentTab === 'customers') renderCustomers();
+  else renderStock();
+  document.querySelectorAll('.tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab === currentTab));
+}
+
+function renderStats(){
+  const today = new Date().toDateString();
+  const todaysOrders = orders.filter(o => new Date(o.date).toDateString() === today).length;
+  const pending = orders.filter(o => o.status === 'pending').length;
+  const lowStock = products.filter(p => p.stock <= 3).length;
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat"><div class="num">${todaysOrders}</div><div class="lbl">Aaj ki booking</div></div>
+    <div class="stat"><div class="num">${pending}</div><div class="lbl">Pending orders</div></div>
+    <div class="stat ${lowStock>0?'alert':''}"><div class="num">${lowStock}</div><div class="lbl">Low stock items</div></div>
+  `;
+}
+
+function getCustomerOrders(custId){
+  if(custId === '__walkin__') return orders.filter(o => !o.customerId);
+  return orders.filter(o => o.customerId === custId);
+}
+function getCustomerBalance(custId){
+  const custOrders = getCustomerOrders(custId);
+  const totalBilled = custOrders.reduce((s,o)=>s+o.total,0);
+  const c = customers.find(x=>x.id===custId);
+  const paid = (c && c.totalPaid) || 0;
+  return totalBilled - paid;
+}
+function openCustomerOrdersDetail(custId){
+  viewingCustomerId = custId;
+  ordersViewMode = 'detail';
+  render();
+}
+function backToCustomersList(){
+  ordersViewMode = 'list';
+  viewingCustomerId = null;
+  render();
+}
+
+function renderOrders(){
+  const main = document.getElementById('mainContent');
+  if(ordersViewMode === 'detail'){
+    renderCustomerOrderDetail(main);
+  } else {
+    renderCustomersOrderList(main);
+  }
+}
+
+function renderCustomersOrderList(main){
+  const term = ordersSearchTerm.trim().toLowerCase();
+  const walkinOrders = orders.filter(o => !o.customerId);
+  let custList = customers.slice();
+  if(term){
+    custList = custList.filter(c => c.name.toLowerCase().includes(term) || (c.phone||'').includes(term));
+  }
+  main.innerHTML = `
+    <div class="field" style="margin-bottom:6px;">
+      <input type="text" id="orderSearchInput" placeholder="Shop / customer search karein..." value="${escapeHtml(ordersSearchTerm)}">
+    </div>
+    <div class="section-title">Shops / Customers</div>
+    ${walkinOrders.length > 0 ? `
+      <div class="card customer-card" onclick="openCustomerOrdersDetail('__walkin__')">
+        <div><div class="cname">Walk-in / General Orders</div><div class="cphone">${walkinOrders.length} orders</div></div>
+      </div>
+    ` : ''}
+    ${custList.length === 0 ? `<div class="empty">Koi customer nahi mila. Customers tab se add karein.</div>` : custList.map(c => {
+      const bal = getCustomerBalance(c.id);
+      const pendingCount = getCustomerOrders(c.id).filter(o=>o.status==='pending').length;
+      return `
+        <div class="card customer-card" onclick="openCustomerOrdersDetail('${c.id}')">
+          <div>
+            <div class="cname">${escapeHtml(c.name)}</div>
+            ${c.phone ? `<div class="cphone">${escapeHtml(c.phone)}</div>` : ''}
+            ${pendingCount>0 ? `<div class="cphone" style="color:var(--amber);">${pendingCount} pending</div>` : ''}
+          </div>
+          <div style="text-align:right;">
+            <div class="cdisc" style="background:${bal>0?'#FBEAE3':'#E7EFE6'};color:${bal>0?'var(--rust)':'var(--green)'};">${bal>0?'Baqaya '+fmtMoney(bal):'Clear'}</div>
+          </div>
+        </div>
+      `;
+    }).join('')}
+  `;
+  const searchInput = document.getElementById('orderSearchInput');
+  if(searchInput){
+    searchInput.addEventListener('input', (e) => { ordersSearchTerm = e.target.value; renderOrders(); });
+    searchInput.focus();
+    const v = searchInput.value;
+    searchInput.value = '';
+    searchInput.value = v;
+  }
+}
+
+function renderCustomerOrderDetail(main){
+  const custId = viewingCustomerId;
+  const isWalkin = custId === '__walkin__';
+  const c = isWalkin ? null : customers.find(x=>x.id===custId);
+  const custOrders = getCustomerOrders(custId).sort((a,b)=> new Date(b.date)-new Date(a.date));
+  const balance = isWalkin ? 0 : getCustomerBalance(custId);
+
+  main.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <button onclick="backToCustomersList()" style="background:none;border:1px solid var(--line);border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;">←</button>
+      <div>
+        <div style="font-weight:700;font-size:16px;">${isWalkin ? 'Walk-in / General Orders' : escapeHtml(c.name)}</div>
+        ${!isWalkin && c.phone ? `<div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(c.phone)}</div>` : ''}
+      </div>
+    </div>
+    ${!isWalkin ? `
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:12px;color:var(--ink-soft);">Baqaya Balance</div>
+          <div style="font-size:19px;font-weight:700;color:${balance>0?'var(--rust)':'var(--green)'};">${fmtMoney(balance)}</div>
+        </div>
+        <button class="save-btn" style="width:auto;padding:9px 16px;" onclick="openPaymentSheet('${custId}')">Payment Record</button>
+      </div>
+    ` : ''}
+    <div class="section-title" style="margin-top:16px;">Bookings</div>
+    ${custOrders.length === 0 ? `<div class="empty">Abhi tak koi booking nahi.</div>` : custOrders.map(o => `
+      <div class="card order-card">
+        <div class="row1">
+          <div class="cust">${fmtDate(o.date)}</div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <select class="status-select" onchange="updateStatus('${o.id}', this.value)">
+              <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
+              <option value="confirmed" ${o.status==='confirmed'?'selected':''}>Confirmed</option>
+              <option value="delivered" ${o.status==='delivered'?'selected':''}>Delivered</option>
+            </select>
+            <button class="del-order" onclick="deleteOrder('${o.id}')">🗑</button>
+          </div>
+        </div>
+        <div class="items">
+          ${o.items.map(it => `<div class="li"><span>${escapeHtml(it.name)} × ${it.qty}</span><span>${fmtMoney(it.price * it.qty)}</span></div>`).join('')}
+        </div>
+        <div class="totals">
+          ${o.discountAmount > 0 ? `
+            <div class="row"><span>Subtotal</span><span>${fmtMoney(o.subtotal)}</span></div>
+            <div class="row disc"><span>Discount${o.discountType==='percent' ? ' ('+o.discountValue+'%)' : ''}</span><span>- ${fmtMoney(o.discountAmount)}</span></div>
+          ` : ''}
+          <div class="row final"><span>Total</span><span>${fmtMoney(o.total)}</span></div>
+        </div>
+        <div class="meta">
+          <button class="add-item-btn" style="width:auto;padding:6px 12px;margin:0;" onclick="shareBillWhatsapp('${o.id}')">📤 Share Bill</button>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function shareBillWhatsapp(orderId){
+  const o = orders.find(x=>x.id===orderId);
+  if(!o) return;
+  let text = `*${shopSettings.name || 'Order Book'}*\n`;
+  text += `Customer: ${o.customerName}\n`;
+  text += `Date: ${fmtDate(o.date)}\n\n`;
+  o.items.forEach(it => { text += `${it.name} x${it.qty} - ${fmtMoney(it.price*it.qty)}\n`; });
+  if(o.discountAmount>0){ text += `\nSubtotal: ${fmtMoney(o.subtotal)}\nDiscount: -${fmtMoney(o.discountAmount)}\n`; }
+  text += `\nTotal: ${fmtMoney(o.total)}`;
+  const phone = (o.phone || '').replace(/[^0-9]/g,'');
+  const encoded = encodeURIComponent(text);
+  const url = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+  window.open(url, '_blank');
+}
+
+function renderCustomers(){
+  const main = document.getElementById('mainContent');
+  if(customers.length === 0){
+    main.innerHTML = `<div class="empty">Koi customer/shop save nahi. + button se add karein.</div>`;
+    return;
+  }
+  main.innerHTML = `<div class="section-title">Customers / Shops</div>` + customers.map(c => `
+    <div class="card customer-card" onclick="openEditCustomer('${c.id}')">
+      <div>
+        <div class="cname">${escapeHtml(c.name)}</div>
+        ${c.phone ? `<div class="cphone">${escapeHtml(c.phone)}</div>` : ''}
+      </div>
+      ${c.discountType !== 'none' ? `<div class="cdisc">${c.discountType==='percent' ? c.discountValue+'% off' : 'Rs.'+c.discountValue+' off'}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderStock(){
+  const main = document.getElementById('mainContent');
+  if(products.length === 0){
+    main.innerHTML = `<div class="empty">Koi product nahi. + button se product add karein.</div>`;
+    return;
+  }
+  const cats = [...new Set(products.map(p=>p.category))];
+  main.innerHTML = cats.map(cat => `
+    <div class="section-title">${escapeHtml(cat)}</div>
+    ${products.filter(p=>p.category===cat).map(p => `
+      <div class="card product-card" onclick="openEditProduct('${p.id}')">
+        ${p.image ? `<img class="pimg" src="${p.image}">` : `<div class="pimg placeholder">📦</div>`}
+        <div class="pinfo">
+          <div class="pname">${escapeHtml(p.name)}</div>
+          ${p.code ? `<div class="pcode">${escapeHtml(p.code)}</div>` : ''}
+          <div class="pcat">${escapeHtml(p.category)}</div>
+        </div>
+        <div class="pright">
+          <div class="pprice">${fmtMoney(p.price)}</div>
+          <div class="pstock ${p.stock<=3?'low':'ok'}">${p.stock} in stock${p.stock<=3?' ⚠':''}</div>
+        </div>
+      </div>
+    `).join('')}
+  `).join('');
+}
+
+function updateStatus(orderId, newStatus){
+  const order = orders.find(o => o.id === orderId);
+  if(order){ order.status = newStatus; saveOrders(); render(); }
+}
+function deleteOrder(orderId){
+  if(!confirm('Ye booking delete kar dein?')) return;
+  orders = orders.filter(o => o.id !== orderId);
+  saveOrders(); render();
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentTab = btn.dataset.tab;
+    if(currentTab === 'orders'){ ordersViewMode = 'list'; viewingCustomerId = null; ordersSearchTerm = ''; }
+    render();
+  });
+});
+
+// ---- Settings ----
+const settingsSheetOverlay = document.getElementById('settingsSheetOverlay');
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  document.getElementById('setShopName').value = shopSettings.name || '';
+  document.getElementById('setShopTag').value = shopSettings.tag || '';
+  document.getElementById('setShopPhone').value = shopSettings.phone || '';
+  document.getElementById('setShopAddress').value = shopSettings.address || '';
+  document.getElementById('setAppPin').value = localStorage.getItem('kb_pin') || '';
+  settingsSheetOverlay.classList.add('open');
+});
+document.getElementById('cancelSettingsBtn').addEventListener('click', () => settingsSheetOverlay.classList.remove('open'));
+document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+  shopSettings = {
+    name: document.getElementById('setShopName').value.trim() || 'Order Book',
+    tag: document.getElementById('setShopTag').value.trim(),
+    phone: document.getElementById('setShopPhone').value.trim(),
+    address: document.getElementById('setShopAddress').value.trim()
+  };
+  saveSettings(); applyShopSettings();
+  const pinVal = document.getElementById('setAppPin').value.trim();
+  if(pinVal.length === 4){ localStorage.setItem('kb_pin', pinVal); }
+  else if(pinVal.length === 0){ localStorage.removeItem('kb_pin'); }
+  else { alert('PIN bilkul 4 digit ka hona chahiye. Baqi settings save ho gayi hain.'); }
+  settingsSheetOverlay.classList.remove('open');
+});
+
+// ---- Payment Sheet ----
+const paymentSheetOverlay = document.getElementById('paymentSheetOverlay');
+function openPaymentSheet(custId){
+  payingCustomerId = custId;
+  document.getElementById('paymentAmountInput').value = '';
+  paymentSheetOverlay.classList.add('open');
+}
+document.getElementById('cancelPaymentBtn').addEventListener('click', ()=> paymentSheetOverlay.classList.remove('open'));
+document.getElementById('savePaymentBtn').addEventListener('click', () => {
+  const amt = Number(document.getElementById('paymentAmountInput').value) || 0;
+  if(amt <= 0){ alert('Sahi raqam likhein.'); return; }
+  const c = customers.find(x=>x.id===payingCustomerId);
+  if(c){
+    c.totalPaid = (c.totalPaid||0) + amt;
+    saveCustomers();
+  }
+  paymentSheetOverlay.classList.remove('open');
+  render();
+});
+
+// ---- Customer Sheet ----
+const customerSheetOverlay = document.getElementById('customerSheetOverlay');
+document.getElementById('cancelCustomerBtn').addEventListener('click', () => customerSheetOverlay.classList.remove('open'));
+
+function setCustFormDiscType(type){
+  custFormDiscType = type;
+  document.querySelectorAll('.cust-disc-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  document.getElementById('custFormDiscValue').style.display = (type === 'none') ? 'none' : 'block';
+}
+document.querySelectorAll('.cust-disc-type-btn').forEach(btn => {
+  btn.addEventListener('click', () => setCustFormDiscType(btn.dataset.type));
+});
+
+function renderCustomRatesList(existing){
+  existing = existing || {};
+  const container = document.getElementById('customRatesList');
+  const cats = [...new Set(products.map(p=>p.category))];
+  container.innerHTML = cats.map(cat => `
+    <div style="font-size:12px;font-weight:700;color:var(--ink-soft);margin:10px 0 4px;">${escapeHtml(cat)}</div>
+    ${products.filter(p=>p.category===cat).map(p => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div style="flex:1;font-size:12.5px;">${escapeHtml(p.name)}${p.code?' <span style="color:var(--teal);">('+escapeHtml(p.code)+')</span>':''}</div>
+        <input type="number" class="custom-rate-input" data-pid="${p.id}" data-base="${p.price}" placeholder="${p.price}" value="${existing[p.id] !== undefined ? existing[p.id] : ''}" style="width:80px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);font-size:12.5px;">
+      </div>
+    `).join('')}
+  `).join('');
+}
+
+function collectCustomRates(){
+  const rates = {};
+  document.querySelectorAll('.custom-rate-input').forEach(inp => {
+    const val = inp.value.trim();
+    if(val !== '' && Number(val) !== Number(inp.dataset.base)){
+      rates[inp.dataset.pid] = Number(val);
+    }
+  });
+  return rates;
+}
+
+function getEffectivePrice(p){
+  const sel = document.getElementById('orderCustomerSelect');
+  const custId = sel ? sel.value : '';
+  if(custId){
+    const c = customers.find(x=>x.id===custId);
+    if(c && c.customRates && c.customRates[p.id] !== undefined){
+      return c.customRates[p.id];
+    }
+  }
+  return p.price;
+}
+
+function refreshItemRowsPricing(){
+  itemRows.querySelectorAll('.item-row').forEach(row => {
+    const codeInput = row.querySelector('.item-code');
+    const foundDiv = row.querySelector('.found-name');
+    const p = findProductByLabel(codeInput.value);
+    if(p){
+      foundDiv.textContent = '✓ ' + p.name + ' — ' + fmtMoney(getEffectivePrice(p)) + ' (' + p.stock + ' left)';
+      foundDiv.classList.remove('notfound');
+    }
+  });
+}
+
+function openNewCustomerSheet(){
+  editingCustomerId = null;
+  document.getElementById('customerSheetTitle').textContent = 'Naya Customer / Shop';
+  document.getElementById('custFormName').value = '';
+  document.getElementById('custFormPhone').value = '';
+  document.getElementById('custFormDiscValue').value = '';
+  setCustFormDiscType('none');
+  renderCustomRatesList({});
+  document.getElementById('deleteCustomerBtn').style.display = 'none';
+  customerSheetOverlay.classList.add('open');
+}
+
+function openEditCustomer(id){
+  const c = customers.find(x => x.id === id);
+  if(!c) return;
+  editingCustomerId = id;
+  document.getElementById('customerSheetTitle').textContent = 'Customer Edit Karein';
+  document.getElementById('custFormName').value = c.name;
+  document.getElementById('custFormPhone').value = c.phone || '';
+  document.getElementById('custFormDiscValue').value = c.discountValue || '';
+  setCustFormDiscType(c.discountType || 'none');
+  renderCustomRatesList(c.customRates || {});
+  document.getElementById('deleteCustomerBtn').style.display = 'block';
+  customerSheetOverlay.classList.add('open');
+}
+
+document.getElementById('deleteCustomerBtn').addEventListener('click', () => {
+  if(!editingCustomerId) return;
+  if(!confirm('Ye customer delete kar dein?')) return;
+  customers = customers.filter(c => c.id !== editingCustomerId);
+  saveCustomers();
+  customerSheetOverlay.classList.remove('open');
+  render();
+});
+
+document.getElementById('saveCustomerBtn').addEventListener('click', () => {
+  const name = document.getElementById('custFormName').value.trim();
+  if(!name){ alert('Naam likhein.'); return; }
+  const phone = document.getElementById('custFormPhone').value.trim();
+  const discountValue = Number(document.getElementById('custFormDiscValue').value) || 0;
+
+  const customRates = collectCustomRates();
+  if(editingCustomerId){
+    const c = customers.find(x => x.id === editingCustomerId);
+    c.name = name; c.phone = phone; c.discountType = custFormDiscType; c.discountValue = discountValue; c.customRates = customRates;
+  } else {
+    customers.push({id: 'c' + Date.now(), name, phone, discountType: custFormDiscType, discountValue, customRates, totalPaid: 0});
+  }
+  saveCustomers();
+  customerSheetOverlay.classList.remove('open');
+  render();
+});
+
+// ---- Order Sheet ----
+const orderSheetOverlay = document.getElementById('orderSheetOverlay');
+const itemRows = document.getElementById('itemRows');
+
+function productLabel(p){ return (p.code ? p.code + ' — ' : '') + p.name; }
+
+function refreshProductsDatalist(){
+  const dl = document.getElementById('productsDatalist');
+  dl.innerHTML = products.map(p => `<option value="${escapeHtml(productLabel(p))}">`).join('');
+}
+
+function findProductByLabel(label){
+  label = label.trim();
+  if(!label) return null;
+  // try exact label match first
+  let p = products.find(pr => productLabel(pr).toLowerCase() === label.toLowerCase());
+  if(p) return p;
+  // try code exact match
+  p = products.find(pr => pr.code && pr.code.toLowerCase() === label.toLowerCase());
+  if(p) return p;
+  // try name contains
+  p = products.find(pr => pr.name.toLowerCase() === label.toLowerCase());
+  if(p) return p;
+  p = products.find(pr => pr.name.toLowerCase().includes(label.toLowerCase()));
+  return p || null;
+}
+
+function populateCustomerSelect(){
+  const sel = document.getElementById('orderCustomerSelect');
+  sel.innerHTML = `<option value="">-- Naya / Walk-in Customer --</option>` +
+    customers.map(c => `<option value="${c.id}">${escapeHtml(c.name)}${c.discountType!=='none' ? ' ('+(c.discountType==='percent'?c.discountValue+'%':'Rs.'+c.discountValue)+' off)' : ''}</option>`).join('');
+}
+
+function applyCustomerSelection(id){
+  if(!id){
+    document.getElementById('custName').value = '';
+    document.getElementById('custPhone').value = '';
+    setOrderDiscType('none');
+    document.getElementById('discountValue').value = '';
+    refreshItemRowsPricing();
+    updateOrderTotal();
+    return;
+  }
+  const c = customers.find(x => x.id === id);
+  if(c){
+    document.getElementById('custName').value = c.name;
+    document.getElementById('custPhone').value = c.phone || '';
+    setOrderDiscType(c.discountType || 'none');
+    document.getElementById('discountValue').value = c.discountValue || '';
+    refreshItemRowsPricing();
+    updateOrderTotal();
+  }
+}
+document.getElementById('orderCustomerSelect').addEventListener('change', (e) => applyCustomerSelection(e.target.value));
+
+function setOrderDiscType(type){
+  orderDiscountType = type;
+  document.querySelectorAll('.disc-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  document.getElementById('discountValue').style.display = (type === 'none') ? 'none' : 'block';
+}
+document.querySelectorAll('.disc-type-btn').forEach(btn => {
+  btn.addEventListener('click', () => { setOrderDiscType(btn.dataset.type); updateOrderTotal(); });
+});
+document.getElementById('discountValue').addEventListener('input', updateOrderTotal);
+
+function addItemRow(){
+  if(products.length === 0){ alert('Pehle Stock tab se products add karein.'); return; }
+  refreshProductsDatalist();
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML = `
+    <div class="field code-field">
+      <label>Code / Naam</label>
+      <input type="text" class="item-code" list="productsDatalist" placeholder="Type karein...">
+      <div class="found-name"></div>
+    </div>
+    <div class="field qty-field">
+      <label>Qty</label>
+      <input type="number" class="item-qty" value="1" min="1">
+    </div>
+    <button type="button" onclick="this.parentElement.remove(); updateOrderTotal();">×</button>
+  `;
+  const codeInput = row.querySelector('.item-code');
+  const foundDiv = row.querySelector('.found-name');
+  codeInput.addEventListener('input', () => {
+    const p = findProductByLabel(codeInput.value);
+    if(p){
+      foundDiv.textContent = '✓ ' + p.name + ' — ' + fmtMoney(getEffectivePrice(p)) + ' (' + p.stock + ' left)';
+      foundDiv.classList.remove('notfound');
+    } else if(codeInput.value.trim()){
+      foundDiv.textContent = 'Product nahi mila';
+      foundDiv.classList.add('notfound');
+    } else {
+      foundDiv.textContent = '';
+    }
+    updateOrderTotal();
+  });
+  row.querySelector('.item-qty').addEventListener('input', updateOrderTotal);
+  itemRows.appendChild(row);
+}
+
+function updateOrderTotal(){
+  let subtotal = 0;
+  itemRows.querySelectorAll('.item-row').forEach(row => {
+    const codeVal = row.querySelector('.item-code').value;
+    const qty = Number(row.querySelector('.item-qty').value) || 0;
+    const p = findProductByLabel(codeVal);
+    if(p) subtotal += getEffectivePrice(p) * qty;
+  });
+
+  let discountAmount = 0;
+  const discVal = Number(document.getElementById('discountValue').value) || 0;
+  if(orderDiscountType === 'percent') discountAmount = subtotal * (discVal/100);
+  else if(orderDiscountType === 'fixed') discountAmount = discVal;
+  discountAmount = Math.min(discountAmount, subtotal);
+
+  const total = subtotal - discountAmount;
+
+  document.getElementById('subtotalDisplay').textContent = fmtMoney(subtotal);
+  document.getElementById('discountRow').style.display = discountAmount > 0 ? 'flex' : 'none';
+  document.getElementById('discountDisplay').textContent = '- ' + fmtMoney(discountAmount);
+  document.getElementById('orderTotalDisplay').textContent = fmtMoney(total);
+}
+
+document.getElementById('fabBtn').addEventListener('click', () => {
+  if(currentTab === 'orders'){
+    if(ordersViewMode === 'detail' && viewingCustomerId && viewingCustomerId !== '__walkin__'){
+      openOrderSheet(viewingCustomerId);
+    } else {
+      openOrderSheet();
+    }
+  }
+  else if(currentTab === 'customers') openNewCustomerSheet();
+  else openProductSheet();
+});
+document.getElementById('addItemBtn').addEventListener('click', addItemRow);
+document.getElementById('cancelOrderBtn').addEventListener('click', () => orderSheetOverlay.classList.remove('open'));
+
+function openOrderSheet(prefillCustomerId){
+  document.getElementById('custName').value = '';
+  document.getElementById('custPhone').value = '';
+  populateCustomerSelect();
+  document.getElementById('orderCustomerSelect').value = prefillCustomerId || '';
+  applyCustomerSelection(prefillCustomerId || '');
+  itemRows.innerHTML = '';
+  refreshProductsDatalist();
+  if(products.length > 0) addItemRow();
+  updateOrderTotal();
+  orderSheetOverlay.classList.add('open');
+}
+
+document.getElementById('saveOrderBtn').addEventListener('click', () => {
+  const custName = document.getElementById('custName').value.trim();
+  if(!custName){ alert('Customer ka naam likhein.'); return; }
+  const rows = [...itemRows.querySelectorAll('.item-row')];
+  if(rows.length === 0){ alert('Kam az kam ek product add karein.'); return; }
+
+  const items = [];
+  let subtotal = 0;
+  for(const row of rows){
+    const codeVal = row.querySelector('.item-code').value;
+    const qty = Number(row.querySelector('.item-qty').value) || 0;
+    const p = findProductByLabel(codeVal);
+    if(p && qty > 0){
+      const effPrice = getEffectivePrice(p);
+      items.push({productId: p.id, name: p.name, price: effPrice, qty});
+      subtotal += effPrice * qty;
+      p.stock = Math.max(0, p.stock - qty);
+    }
+  }
+  if(items.length === 0){ alert('Koi valid product nahi mila. Code/naam check karein.'); return; }
+
+  const discVal = Number(document.getElementById('discountValue').value) || 0;
+  let discountAmount = 0;
+  if(orderDiscountType === 'percent') discountAmount = subtotal * (discVal/100);
+  else if(orderDiscountType === 'fixed') discountAmount = discVal;
+  discountAmount = Math.min(discountAmount, subtotal);
+  const total = subtotal - discountAmount;
+
+  const selectedCustId = document.getElementById('orderCustomerSelect').value || null;
+  orders.push({
+    id: 'o' + Date.now(),
+    customerId: selectedCustId,
+    customerName: custName,
+    phone: document.getElementById('custPhone').value.trim(),
+    items, subtotal,
+    discountType: orderDiscountType, discountValue: discVal, discountAmount,
+    total, status: 'pending', date: new Date().toISOString()
+  });
+  saveOrders(); saveProducts();
+  orderSheetOverlay.classList.remove('open');
+  if(selectedCustId){ viewingCustomerId = selectedCustId; ordersViewMode = 'detail'; }
+  render();
+});
+
+// ---- Product Sheet ----
+const productSheetOverlay = document.getElementById('productSheetOverlay');
+const prodImgInput = document.getElementById('prodImgInput');
+const prodImgPreview = document.getElementById('prodImgPreview');
+document.getElementById('cancelProductBtn').addEventListener('click', () => productSheetOverlay.classList.remove('open'));
+
+function renderCategoryOptions(selected){
+  const sel = document.getElementById('prodCategory');
+  sel.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}" ${c===selected?'selected':''}>${escapeHtml(c)}</option>`).join('');
+}
+document.getElementById('newCatBtn').addEventListener('click', () => {
+  const field = document.getElementById('newCatField');
+  field.style.display = field.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('newCatInput').focus();
+});
+
+function setImagePreview(dataUrl){
+  currentProdImage = dataUrl || '';
+  if(currentProdImage){ prodImgPreview.src = currentProdImage; prodImgPreview.classList.remove('placeholder'); }
+  else { prodImgPreview.src = ''; prodImgPreview.classList.add('placeholder'); }
+}
+
+prodImgInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxSize = 300;
+      let w = img.width, h = img.height;
+      if(w > h){ if(w > maxSize){ h = h*maxSize/w; w = maxSize; } }
+      else{ if(h > maxSize){ w = w*maxSize/h; h = maxSize; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      setImagePreview(canvas.toDataURL('image/jpeg', 0.75));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+function openProductSheet(){
+  editingProductId = null;
+  document.getElementById('productSheetTitle').textContent = 'Naya Product';
+  document.getElementById('prodName').value = '';
+  document.getElementById('prodCode').value = '';
+  renderCategoryOptions(categories[0]);
+  document.getElementById('newCatField').style.display = 'none';
+  document.getElementById('newCatInput').value = '';
+  document.getElementById('prodPrice').value = '';
+  document.getElementById('prodStock').value = '';
+  document.getElementById('deleteProductBtn').style.display = 'none';
+  setImagePreview('');
+  productSheetOverlay.classList.add('open');
+}
+
+function openEditProduct(id){
+  const p = products.find(x => x.id === id);
+  if(!p) return;
+  editingProductId = id;
+  document.getElementById('productSheetTitle').textContent = 'Product Edit Karein';
+  document.getElementById('prodName').value = p.name;
+  document.getElementById('prodCode').value = p.code || '';
+  renderCategoryOptions(p.category);
+  document.getElementById('newCatField').style.display = 'none';
+  document.getElementById('newCatInput').value = '';
+  document.getElementById('prodPrice').value = p.price;
+  document.getElementById('prodStock').value = p.stock;
+  document.getElementById('deleteProductBtn').style.display = 'block';
+  setImagePreview(p.image || '');
+  productSheetOverlay.classList.add('open');
+}
+
+document.getElementById('deleteProductBtn').addEventListener('click', () => {
+  if(!editingProductId) return;
+  if(!confirm('Ye product delete kar dein?')) return;
+  products = products.filter(p => p.id !== editingProductId);
+  saveProducts();
+  productSheetOverlay.classList.remove('open');
+  render();
+});
+
+document.getElementById('saveProductBtn').addEventListener('click', () => {
+  const name = document.getElementById('prodName').value.trim();
+  if(!name){ alert('Product ka naam likhein.'); return; }
+  const code = document.getElementById('prodCode').value.trim();
+
+  const newCatField = document.getElementById('newCatField');
+  let category;
+  if(newCatField.style.display !== 'none'){
+    const newCat = document.getElementById('newCatInput').value.trim();
+    if(!newCat){ alert('Nayi category ka naam likhein.'); return; }
+    category = newCat;
+    if(!categories.includes(newCat)){ categories.push(newCat); saveCategories(); }
+  } else {
+    category = document.getElementById('prodCategory').value;
+  }
+
+  const price = Number(document.getElementById('prodPrice').value) || 0;
+  const stock = Number(document.getElementById('prodStock').value) || 0;
+
+  if(editingProductId){
+    const p = products.find(x => x.id === editingProductId);
+    p.name = name; p.code = code; p.category = category; p.price = price; p.stock = stock; p.image = currentProdImage;
+  } else {
+    products.push({id: 'p' + Date.now(), name, code, category, price, stock, image: currentProdImage});
+  }
+  saveProducts();
+  productSheetOverlay.classList.remove('open');
+  render();
+});
+
+loadAll();
+</script>
+
+</body>
+</html>
